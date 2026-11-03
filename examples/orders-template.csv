@@ -1,0 +1,2 @@
+﻿"id","customer","sourceChain","asset","expectedAmount","recipient","createdAt","dueAt","merchantStatus","depositAddress","depositMemo","txHash","senderAccountId","note"
+"EXAMPLE-001","请替换为客户简称","Base","USDC","100","请填写收款账户.near","2026-11-03T06:01:44.305Z","2026-11-03T07:01:44.305Z","unpaid","","","","","请替换示例内容，勿填写私钥"

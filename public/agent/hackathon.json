@@ -1,0 +1,16 @@
+{
+  "verifiedOn": "2026-11-03",
+  "officialUrl": "https://nearhackathon.com/",
+  "deadlineUtc": "2026-11-14T23:59:00Z",
+  "deadlineBeijing": "2026年11月15日 07:59",
+  "requiresPreRegistration": false,
+  "suggestedTracks": [
+    "AI Security & Defense",
+    "Real-World Money"
+  ],
+  "projectName": "FlowTrace — NEAR Agent Operations",
+  "description": "FlowTrace provides operational tools for agents and people on NEAR. It reads native NEAR and three supported fungible-token balances at a final block, explains account access keys, investigates a declared payment against finalized FT receipts and optional 1Click status, and prepares unsigned FT-transfer templates after balance, storage and caller-limit checks. A web conversation can call the same tools; manual forms and JSON reports keep the inputs and evidence reviewable. It does not hold keys, sign transactions, enforce on-chain spending caps or claim to simulate contract execution.",
+  "demoUrl": "https://www.darkchunk.win/collect/agent/",
+  "submissionStatus": "not_submitted",
+  "repositoryUrl": "https://github.com/yinbowen-dc/flowtrace-near"
+}

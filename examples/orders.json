@@ -1,0 +1,18 @@
+[
+  {
+    "id": "EXAMPLE-001",
+    "customer": "替换为你的订单简称",
+    "sourceChain": "Base",
+    "asset": "USDC",
+    "expectedAmount": "100.000001",
+    "recipient": "example-merchant.near",
+    "createdAt": "2026-11-03T06:00:00.000Z",
+    "dueAt": "2026-11-04T06:00:00.000Z",
+    "merchantStatus": "unpaid",
+    "depositAddress": "",
+    "depositMemo": "",
+    "txHash": "",
+    "senderAccountId": "",
+    "note": "字段示例；请替换真实订单、收款账户和原渠道查询标识。"
+  }
+]

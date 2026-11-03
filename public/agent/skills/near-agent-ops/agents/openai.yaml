@@ -1,0 +1,4 @@
+interface:
+  display_name: "NEAR Agent Operations"
+  short_description: "Inspect NEAR assets, payments and transfer preflights"
+  default_prompt: "Use $near-agent-ops to inspect NEAR mainnet facts and explain sourced findings and unresolved checks."
