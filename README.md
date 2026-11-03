@@ -1,106 +1,204 @@
-# FlowTrace — NEAR Agent Operations
+<div align="center">
+  <img src="public/icon.svg" width="72" height="72" alt="FlowTrace logo" />
+  <h1>FlowTrace</h1>
+  <p><strong>NEAR Agent Toolkit</strong></p>
+  <p>Read the chain. Review the evidence.</p>
+  <p>
+    <a href="https://www.darkchunk.win/collect/agent/">Live demo</a> ·
+    <a href="https://www.darkchunk.win/collect/agent/#changes">Account changes</a> ·
+    <a href="public/agent/guide.md">MCP &amp; API guide</a> ·
+    <a href="#quick-start">Quick start</a>
+  </p>
+  <p>
+    <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-255c44?style=flat-square" alt="MIT license" /></a>
+    <a href="package.json"><img src="https://img.shields.io/badge/Node.js-22%2B-255c44?style=flat-square" alt="Node.js 22 or later" /></a>
+    <a href="#connect-your-agent"><img src="https://img.shields.io/badge/MCP-8_tools-4355db?style=flat-square" alt="8 MCP tools" /></a>
+    <a href="#verification"><img src="https://img.shields.io/badge/tests-76_verified-255c44?style=flat-square" alt="76 tests verified for v0.4" /></a>
+  </p>
+  <p><strong>English</strong> · <a href="README.zh-CN.md">简体中文</a></p>
+</div>
 
-Check NEAR accounts, investigate a payment, and review a transfer before asking a wallet to sign. People, conversational agents, and MCP clients use the same deterministic backend, with timestamps, sources, and unresolved checks visible in each report.
+FlowTrace gives people and AI agents a shared way to inspect NEAR accounts, compare changes, investigate payments, and check FT transfers before wallet review. One backend serves **8 MCP tools**, **4 task workflows**, a conversational interface, and manual forms.
 
-**[Live agent console](https://www.darkchunk.win/collect/agent/)** · **[Payment investigation workspace](https://www.darkchunk.win/collect/)** · [Integration guide](public/agent/guide.md) · [Example evidence](examples/README.md)
+Reports keep block anchors, data sources, query times, exact amounts, and unknown results visible. **Wallet keys and transaction signing stay with the user.**
 
-Built for **NEAR HACKATHON**, November 2026. Suggested tracks: AI Security & Defense and Real-World Money. This repository contains a working application; competition submission is still pending.
+<p align="center">
+  <a href="https://www.darkchunk.win/collect/agent/#changes"><img src="docs/assets/account-changes.png" width="100%" alt="FlowTrace comparing balances, access keys and contract code at two finalized NEAR block heights" /></a>
+  <br />
+  <sub>A real public-account comparison captured on November 3, 2026. Historical observation; balances change.</sub>
+</p>
 
-## The problem
+## What you can do
 
-An agent can return a confident explanation while the underlying balance query failed, a payment has not finalized, or a transfer exceeds the user's stated limit. A channel's success status can also differ from what a merchant has actually received. FlowTrace keeps these checks explicit and returns evidence that a person or another tool can inspect.
-
-## What works
-
-| Workflow | Result |
+| Your question | FlowTrace checks |
 | --- | --- |
-| Inspect an account | Native NEAR and USDC/USDT/wNEAR balances plus direct access-key permissions, queried at one final block. Failed queries remain unknown. |
-| Compare account snapshots | Read two finalized heights and report exact balance deltas, added/removed/changed access keys, and contract-code changes. Unknown data stays unknown. |
-| Investigate a payment | Compare a declared order against the net standard FT events in one finalized NEAR transaction, with optional NEAR Intents 1Click status. |
-| Preflight an FT transfer | Check balances, receiver existence and token registration, native storage/gas reserve, and an optional caller amount limit. Return checks and, where appropriate, an unsigned wallet template. |
-| Talk to the service | An OpenAI Agents SDK agent calls those workflows. The UI exposes actual tool results and can transfer a report into the manual panel. |
-| Integrate another agent | Eight tools over standard Streamable HTTP MCP or local stdio, four task APIs, and a downloadable Skill. |
-| Recheck evidence | Download JSON and replay the payment rules locally with the included CLI. |
+| **What is in this account?** | Native NEAR, USDC, USDT and wNEAR balances, plus direct access-key permissions. |
+| **What changed recently?** | Exact balance deltas, added or removed keys, changed permissions, and contract-code hashes at two finalized heights. |
+| **Did this payment arrive?** | A declared order against the net standard FT events in one finalized NEAR transaction, with optional 1Click status. |
+| **Is this transfer ready for wallet review?** | FT balance, receiver and token-storage registration, native fee reserve, and an optional caller amount limit. |
 
-NEAR provides the account model, access-key permissions, final block anchors, FT events, token storage rules, and transaction data used by these checks. 1Click is an optional channel-status source; it is not independent proof of merchant receipt.
+Use the **web console** for manual checks, **chat** to ask in natural language, or **MCP / REST** from another application. You can download JSON reports and replay included payment evidence offline.
 
-## Try it in three minutes
+## Try the demo
 
-New in v0.4: open [account changes](https://www.darkchunk.win/collect/agent/#changes), fill the public example and run a comparison over 100 block heights. Reports show the actual interval in seconds. This is an on-demand net snapshot comparison, not complete transaction history, continuous monitoring, or a security verdict.
+1. Open [Account changes](https://www.darkchunk.win/collect/agent/#changes).
+2. Click **填入公开示例** (Fill public example), then **查询两个区块并核对** (Compare).
+3. Inspect both block anchors, the actual time interval, and any unknown checks. Download the JSON report.
 
-1. Open the [agent console](https://www.darkchunk.win/collect/agent/). Ask: `查询 wrap.near 的余额和公钥权限`. Expand the tool results and inspect the final block, sources, and balances.
-2. Send the result to the manual panel or run the same account query directly there. Download its JSON report.
-3. Ask: `预检从 wrap.near 到 v2.ref-finance.near 转 0.01 wNEAR，本次上限 0.001 wNEAR`. The amount exceeds the stated limit, so the report is blocked and contains no executable transfer template.
-4. Open the payment workspace's explicitly labelled demo orders, or replay the included historical public receipt locally. The sample is not a real merchant order and does not establish invoice ownership.
+For the chat interface, try:
 
-`wrap.near` and `v2.ref-finance.near` are public example accounts. This project does not control them. These examples only query public information; they do not send transactions. If the AI provider is unavailable or a usage limit is reached, the manual forms and MCP workflows remain usable without a model key.
+> 核对 wrap.near 最近100个区块的余额和权限变化。
+>
+> Compare the balance and permission changes of wrap.near over the last 100 block heights.
 
-## Run locally
+`wrap.near` is a public example account; this project does not control it. A snapshot difference shows **net changes**, not every intervening transaction. The web UI is currently in Chinese; tool names and JSON schemas use English identifiers.
 
-Requires Node.js 22 or later.
+## Quick start
+
+Requires **Node.js 22+** and npm.
 
 ```sh
+git clone https://github.com/yinbowen-dc/FlowTrace.git
+cd FlowTrace
 npm ci
 npm start
-# Open http://127.0.0.1:8804/agent/
+```
 
+Open **http://127.0.0.1:8804/agent/**.
+
+Manual forms, MCP and task APIs work without an AI key. Optional chat uses the server-side `OPENAI_API_KEY` configuration. See the [configuration guide](public/agent/guide.md) for model settings, limits and data handling.
+
+```sh
+# Run deterministic tests with fixtures
 npm test
+
+# Recheck the included historical payment evidence, offline
 npm run replay -- examples/public-receipt-evidence.json
 ```
 
-The manual console, MCP, and task APIs need no AI key. For optional conversation, set a server-side `OPENAI_API_KEY` in a Git-ignored `.env.local`. Optional settings are `OPENAI_MODEL` (default `gpt-5.6-terra`) and `CHAT_DAILY_LIMIT` (default 40 attempts per UTC day, held in process memory). Never put a model key in frontend code.
+## Connect your agent
 
-Other settings: `HOST`, `PORT`, `BASE_PATH`, `ALLOWED_HOSTS`, and optional `ONECLICK_API_KEY` where required by the upstream provider. The deployment prefix is empty locally or, for example, `/collect`. An upstream timeout or authorization error is returned explicitly.
+### Remote MCP
 
-## Agent integration
+Endpoint: **https://www.darkchunk.win/collect/mcp**
 
-Public HTTP MCP endpoint:
-
-```json
-{"mcpServers":{"flowtrace-near":{"url":"https://www.darkchunk.win/collect/mcp"}}}
-```
-
-Local stdio:
+Clients that support Streamable HTTP MCP can use this configuration; exact settings vary by client:
 
 ```json
-{"mcpServers":{"flowtrace-near":{"command":"node","args":["/absolute/path/to/flowtrace/mcp/stdio.mjs"]}}}
+{
+  "mcpServers": {
+    "flowtrace": {
+      "url": "https://www.darkchunk.win/collect/mcp"
+    }
+  }
+}
 ```
 
-Tool names: `near_network_status`, `near_account_overview`, `near_account_permissions`, `near_account_changes`, `near_verify_receipt`, `intents_get_status`, `near_investigate_payment`, and `near_transfer_preflight`.
+### Local stdio
+
+Run `npm ci` first, then replace the path with your checkout:
+
+```json
+{
+  "mcpServers": {
+    "flowtrace": {
+      "command": "node",
+      "args": ["/absolute/path/to/FlowTrace/mcp/stdio.mjs"]
+    }
+  }
+}
+```
+
+A runnable client example is included:
 
 ```sh
-# With the local server running in another terminal:
-npm run agent:demo
-
-# Or let the example launch a stdio server:
 npm run agent:demo -- --stdio --account wrap.near
 ```
 
-`GET /api/agent/catalog` describes all inputs. `POST /api/agent/run` accepts `{task,input}` for `account_inspect`, `account_compare`, `payment_investigate`, or `transfer_preflight`. See the [integration guide](public/agent/guide.md) for limits and exact fields. Monetary inputs are decimal strings and use exact atomic units internally.
+<details>
+<summary><strong>Explore all 8 MCP tools</strong></summary>
 
-## Architecture and verification
+| Tool | Purpose |
+| --- | --- |
+| `near_network_status` | Read the mainnet final block anchor. |
+| `near_account_overview` | Read native NEAR and the three supported FT balances at one block. |
+| `near_account_permissions` | Inspect direct account access keys and their permissions. |
+| `near_account_changes` | Compare balances, permissions and code hashes across two finalized heights. |
+| `near_verify_receipt` | Check the net FT event amount in a specific finalized transaction. |
+| `intents_get_status` | Read a NEAR Intents 1Click channel-status report. |
+| `near_investigate_payment` | Compare a payment claim with transaction evidence and optional channel status. |
+| `near_transfer_preflight` | Check FT transfer conditions and prepare an unsigned wallet template. |
 
-The browser and offline replay CLI share `public/lib/core.js`. `adapters.mjs` queries fixed NEAR mainnet RPC providers and optional 1Click status. `agent/service.mjs` implements deterministic workflows shared by REST and MCP. `agent/chat.mjs` connects the conversational interface to these same workflows using the official OpenAI Agents SDK. No model-generated code is executed.
+Discover exact inputs using `tools/list` or the [live catalog](https://www.darkchunk.win/collect/api/agent/catalog). The [integration guide](public/agent/guide.md) covers scope, limits, examples and the [companion Skill](public/agent/skills/near-agent-ops/SKILL.md).
 
-The automated suite covers event-netting and receipt finality, order association, amount precision, upstream failures, task validation, transfer limits, chat tool grounding, and HTTP/stdio MCP. The v0.4 suite passes 76 tests. Tests use controlled fixtures. Live RPC, standard MCP-client, real model-tool and browser checks were performed separately during development ([historical observations](examples/account-changes-verification.json)); an old observation is not a current balance or a guarantee of upstream availability.
+</details>
 
-## Boundaries and data handling
+## Use the REST API
 
-- No key custody, transaction signing, broadcasting, swaps, refunds, or automated trading.
-- Preflight is a rules check, not contract simulation or a guarantee of successful execution. The caller's amount limit is not an on-chain spending restriction. A FunctionCall key's gas allowance is not a token spending allowance.
-- Fixed NEAR mainnet tokens only: USDC, USDT, and wNEAR. The account report is not a complete portfolio, security audit, staking report, or Intents internal-balance report.
-- A payment check covers the declared order and one transaction. It does not prove source-chain settlement, refunds, invoice ownership, or aggregate every transfer to an account.
-- RPC results are trusted upstream observations, not an independently verified light-client proof. File hashes check content integrity, not upstream authenticity.
-- Orders stay in the browser's unencrypted localStorage. Queries send necessary public identifiers to fixed upstream services. Shared browsers can expose locally saved orders.
-- Chat messages and needed tool results go to OpenAI. SDK remote tracing is disabled and Responses uses `store=false`; this service does not persist chat bodies. Do not enter wallet secrets or API keys.
-- Public endpoints have rate and concurrency limits, and no production SLA. The chat's daily counter resets with the server process and is not a precise spending budget.
+This public example requests a read-only comparison:
 
-## Dependencies and development disclosure
+```sh
+curl https://www.darkchunk.win/collect/api/agent/run \
+  -H 'Content-Type: application/json' \
+  --data '{"task":"account_compare","input":{"accountId":"wrap.near","lookbackBlocks":100}}'
+```
 
-This application was implemented with AI coding assistance. The FlowTrace application and agent interfaces were developed on November 3, 2026; the existing hosting/domain is only deployment infrastructure, and the earlier market dashboard is not a source-code or runtime dependency.
+| Task | Use it for |
+| --- | --- |
+| `account_inspect` | Balances and access keys at a shared final block. |
+| `account_compare` | Net account changes across two finalized heights. |
+| `payment_investigate` | One order claim and its target FT transaction. |
+| `transfer_preflight` | FT transfer checks and an unsigned request for wallet review. |
 
-The lockfile pins official MCP SDK packages, OpenAI Agents SDK, and Zod. Those upstream libraries, Node.js, NEAR RPC, NearBlocks discovery, and 1Click are external services or existing dependencies, not original work claimed by this project. NearBlocks only discovers sample transaction identifiers; RPC receipts are queried again for verification. Imported fixtures are labelled public historical evidence or synthetic demonstrations.
+`lookbackBlocks` is an integer from **1 to 5000**, default **100**. It is a height difference; the report returns the actual time interval. Amount inputs use decimal strings and exact atomic units.
+
+## How it works
+
+```mermaid
+flowchart LR
+    A[Web · Chat · MCP · REST] --> B[Shared deterministic checks]
+    B <--> C[NEAR mainnet RPC]
+    B <--> D[1Click status · optional]
+    B --> E[Reports and evidence]
+```
+
+The agent selects existing tools and explains their results. The backend reads fixed upstream providers and runs the same checks for every interface. The browser and offline payment-replay CLI share the payment rules.
+
+## Scope and trust
+
+- **Read-only operations and unsigned FT templates.** Signing, broadcasting, swaps, refunds and automated trading are outside this version.
+- **Fixed asset coverage:** native NEAR plus USDC, USDT and wNEAR. Other tokens, NFTs, staking-pool shares and Intents internal balances are outside the account report.
+- **Two snapshots show net differences.** Zero net movement does not establish inactivity; a key change does not establish theft. Historical-data failures remain unknown. Continuous monitoring and notifications are not implemented.
+- **Payment association is declared by the caller.** One transaction does not prove invoice ownership, full cross-chain settlement or source-chain refunds. Channel success alone is not merchant-receipt proof.
+- **Preflight is a rules check.** It is not contract simulation, a guarantee of execution, or an on-chain spending limit. FunctionCall key allowance is a gas budget, not a token budget.
+- **RPC data is an upstream observation.** Reports are not independent light-client proofs. File hashes establish content integrity, not upstream authenticity.
+
+Chat messages and needed tool results go to OpenAI; this service does not persist chat bodies. Imported orders stay in the browser's unencrypted localStorage. Public endpoints have rate and concurrency limits and no production SLA. More detail is in the [data and integration guide](public/agent/guide.md).
+
+## Verification
+
+The **v0.4 application baseline passed 76 tests** on Node.js 25.9.0 and 22.23.4. The suite covers receipt finality, exact amounts, unknown states, snapshot anchoring, permission changes, transfer limits, tool grounding and HTTP/stdio MCP.
+
+Live mainnet, standard MCP-client, real model-tool and browser checks were performed separately. See the [historical verification record](examples/account-changes-verification.json) and [offline evidence](examples/README.md). These records describe past observations, not current balances or uptime guarantees.
+
+## Next steps
+
+Planned, not yet available:
+
+- Persistent watchlists, scheduled collection and change notifications.
+- Transaction-history indexing and merchant order-system integration.
+- Authenticated team workspaces and production service controls.
+
+## Contributing
+
+Bug reports, clearer docs and focused improvements are welcome. Start with [CONTRIBUTING.md](CONTRIBUTING.md); include a reproducible example and the public identifiers needed to understand it.
+
+## Project notes
+
+Built for **NEAR HACKATHON 2026**, with AI coding assistance. Competition submission is pending; see [submission preparation](public/agent/submission.md). The existing hosting domain is deployment infrastructure, and the earlier market dashboard is not a source or runtime dependency.
+
+FlowTrace uses the official MCP SDK, OpenAI Agents SDK, Zod, NEAR RPC, NearBlocks discovery and optional 1Click status. NearBlocks discovers sample identifiers; transaction evidence is read again through RPC. Dependencies retain their own licenses.
 
 ## License
 
-MIT; see [LICENSE](LICENSE). Dependency licenses remain with their respective owners.
+[MIT](LICENSE) · FlowTrace contributors.
