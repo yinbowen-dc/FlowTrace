@@ -9,6 +9,7 @@ The README combines conceptual brand artwork with real browser captures. They se
 | `agent-chat.png` | Cropped browser capture of an actual chat calling `compare_account`, with public-account data and finalized block anchors. |
 | `transfer-preflight.png` | Cropped browser capture of a read-only preflight: 0.01 wNEAR requested from `wrap.near` to `v2.ref-finance.near`, with a 0.001 per-request limit. The check was blocked; no signing or broadcast occurred. |
 | `account-changes.png` | Earlier public-account comparison screenshot, retained for historical documentation. |
+| `account-watch.png` | Cropped production-browser capture of v0.5.0: two public accounts, observation controls and a real automatically collected `v2.ref-finance.near` USDC/wNEAR change event, final blocks 222874474 to 222874805. The crop ends after the first event; the full feed remains in the console. |
 | `flowtrace-header.svg` | Earlier outlined vector wordmark, retained as a source asset. |
 
 Application captures were taken on November 3, 2026 (Asia/Shanghai). Balances and blocks are historical. The accounts belong to the public example, not the project. Captures contain no wallet secrets or private customer data. GIF frames preserve the interface; palette conversion and playback timing were applied for web delivery.

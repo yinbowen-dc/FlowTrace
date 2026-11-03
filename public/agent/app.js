@@ -1,5 +1,6 @@
-import {mountChat} from './chat-ui.js?v=4.2';
-import {resolveDemo, demoLink, demoKeyForTask} from './demo-routes.js?v=4.2';
+import {mountChat} from './chat-ui.js?v=5.0';
+import {resolveDemo, demoLink, demoKeyForTask} from './demo-routes.js?v=5.0';
+import {mountWatch} from './watch-ui.js?v=5.0';
 const $=s=>document.querySelector(s),esc=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const api=new URL('../api/agent/',location.href),mcp=new URL('../mcp',location.href).href;
 $('#mcp-url').value=mcp;
@@ -53,4 +54,5 @@ applyLocation();
 function openManual(task,input={},example=false){if($('#run').disabled){$('#status').textContent='手动查询正在进行，完成后再切换。';return false;}select(task);const values=example?{...definitions[task].sample,...input}:input;if(example&&task==='payment_investigate'){values.createdAt='2026-11-03T05:50:25.074Z';values.dueAt='2026-11-03T06:00:25.074Z';}for(const [key,value]of Object.entries(values))if($('#task-form').elements[key])$('#task-form').elements[key].value=value;return true;}
 function showReport(report){const d=report.data,input=report.task==='account_inspect'?{accountId:d.accountId}:report.task==='payment_investigate'?d.order:d.input;if(!openManual(report.task,input))return;lastReport=report;render(report);$('#download').disabled=false;$('#status').textContent='对话查询快照 · '+new Date(report.completedAt).toLocaleString('zh-CN')+'；点击查询可重新读取主网。';}
 mountChat({api,openManual,showReport});
+mountWatch({api});
 fetch(new URL('catalog',api)).then(async r=>{if(!r.ok)throw Error();return r.json();}).then(({data})=>{$('#catalog-status').textContent=`v${data.version} · ${data.tools.length} 个工具`;$('#tools').innerHTML=data.tools.map(t=>`<article class="tool"><code>${esc(t.name)}</code><p>${esc(t.description)}</p></article>`).join('');}).catch(()=>{$('#catalog-status').textContent='目录读取失败，请刷新';});

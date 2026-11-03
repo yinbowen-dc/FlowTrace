@@ -7,3 +7,7 @@
 在项目根目录运行 `npm run replay -- examples/public-receipt-evidence.json`，不需要钱包、密钥或网络。文件内的 SHA256 只检查内容一致性，不独立证明 RPC 真实性或当前订单状态。
 
 - `account-changes-verification.json`：v0.4 主网快照对比、标准 MCP 客户端和真实模型工具调用的历史核验摘要；不是当前余额或持续监控数据。
+
+## Background observation evidence
+
+[watch-verification.json](watch-verification.json) records a real public `wrap.near` baseline and a later event collected while the preview tab was closed on November 3, 2026. It preserves the block anchors, rules and net differences; no browser session credentials are included. This file is historical evidence, not a replay fixture or an independent light-client proof. See [v0.5.0](../docs/RELEASE-v0.5.0.md) for the restart and production checks.

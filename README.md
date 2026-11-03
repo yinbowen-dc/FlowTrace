@@ -12,6 +12,18 @@
 </p>
 <p align="center"><strong>NEAR mainnet</strong> · 8 MCP tools · <a href="LICENSE">MIT</a></p>
 
+## 👁️ Close the tab. Come back to the changes.
+
+Add an account to your watchlist. The server checks balances, keys and code approximately every three minutes and records changes that meet your rules. **Collection continues while the browser is closed**, for a renewable 24-hour observation lease. Pause, resume and export reports from the console.
+
+Up to three accounts per browser session. Incomplete observations preserve the last complete baseline. These are snapshot differences, not full transaction histories or theft detection.
+
+[![Real mainnet watchlist and automatically collected change event](docs/assets/account-watch.png)](https://www.darkchunk.win/collect/agent/#watch)
+
+<sub>Production capture, November 3, 2026. Two public accounts and a real background change event; values are historical.</sub>
+
+**[Start account observation →](https://www.darkchunk.win/collect/agent/#watch)** · [Rules, data and deployment](docs/WATCH.md)
+
 ## 🔎 What just changed in this account?
 
 Did the balance move? Was a key added? Did the contract code change?
@@ -104,34 +116,34 @@ The same checks work in the browser and in clients that support HTTP MCP:
 2. Click **填入公开示例** (Fill public example), then **查询两个区块并核对** (Compare).
 3. Review the changes and blocks. Download your first JSON report.
 
-Want your own instance? **Node.js 22+**, then:
+Want your own instance? **Node.js 22.16+**, then:
 
 ```sh
 git clone https://github.com/yinbowen-dc/FlowTrace.git
 cd FlowTrace
 npm ci
-npm start
+WATCH_DB_PATH=./runtime/watch.sqlite npm start
 ```
 
 Open **http://127.0.0.1:8804/agent/**. Manual forms, MCP and REST need no model key. AI chat uses server-side configuration; see the [integration guide](docs/INTEGRATION.md).
 
 ## 🛠️ Working today. More to build.
 
-This is **v0.4.1 MVP**: web chat, manual checks, 8 MCP tools and 4 workflows are implemented. The v0.4.1 release passed **81 tests**; mainnet, MCP-client and real model-tool checks were performed separately.
+This is **v0.5.0 MVP**: web chat, manual checks, 8 MCP tools and 4 workflows are implemented. The v0.5.0 release passed **96 tests**; mainnet, MCP-client and real model-tool checks were performed separately.
 
-Up next: **watchlists → scheduled collection → change notifications**, plus transaction-history indexing and merchant order integration. **These features are not live yet.** Come help build them.
+Server-side watchlists, periodic snapshots and in-app events are now available. Transaction-history indexing and merchant order integration are next; those extensions are not implemented.
 
-[Plan →](docs/PLAN.md) · [v0.4.1 release →](docs/RELEASE-v0.4.1.md) · [Ideas and bugs →](https://github.com/yinbowen-dc/FlowTrace/issues) · [Contribute →](CONTRIBUTING.md) · [Mainnet verification →](examples/account-changes-verification.json) · [Offline payment evidence →](examples/README.md)
+[Plan →](docs/PLAN.md) · [v0.5.0 release →](docs/RELEASE-v0.5.0.md) · [Ideas and bugs →](https://github.com/yinbowen-dc/FlowTrace/issues) · [Contribute →](CONTRIBUTING.md) · [Mainnet verification →](examples/account-changes-verification.json) · [Offline payment evidence →](examples/README.md)
 
 <details>
 <summary>Before you use it: data, scope and limits</summary>
 
-- Mainnet data is queried on demand. Continuous monitoring, alerts and arbitrage execution are not implemented.
+- MCP and manual tasks query on demand. Browser watches opt into leased server-side collection and in-app events; external notifications and arbitrage execution are not implemented.
 - Account reports cover native NEAR plus USDC, USDT and wNEAR, not other tokens, NFTs, staking-pool shares or Intents internal balances.
 - Comparisons show net snapshot differences. Zero net movement does not establish inactivity; a key change does not establish theft. Historical-data failures remain unknown.
 - A payment check does not prove invoice ownership, full cross-chain settlement or source-chain refunds. Channel success alone is not merchant-receipt proof.
 - Preflight is not simulation or an execution guarantee. FlowTrace does not hold keys, sign, broadcast, swap or refund. FunctionCall key allowance is a gas budget.
-- Chat messages and needed tool results go to OpenAI; the service does not persist chat bodies. Imported orders remain in the browser's unencrypted localStorage. Never enter wallet secrets or API keys.
+- Chat messages and needed tool results go to OpenAI; the service does not persist chat bodies. Opt-in watches store selected accounts, baselines and events in browser-session isolation; see [watch data handling](docs/WATCH.md). Imported orders remain in the browser's unencrypted localStorage. Never enter wallet secrets or API keys.
 - Public endpoints have rate and concurrency limits and no production SLA. RPC data is an upstream observation, not an independent light-client proof. The web UI is currently in Chinese.
 
 See the [full data and integration guide](public/agent/guide.md) (Chinese) and [visual asset notes](docs/assets/README.md).

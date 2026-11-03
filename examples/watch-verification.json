@@ -1,0 +1,136 @@
+{
+  "service": "FlowTrace",
+  "version": "0.5.0",
+  "observedOn": "2026-11-03",
+  "network": "NEAR mainnet",
+  "scope": "Historical public-account observations from the real background worker. The preview tab was closed between these events. No session credentials, owner IDs or watch IDs are included. RPC observations are not independent cryptographic proofs or full transaction histories.",
+  "events": [
+    {
+      "seq": 1,
+      "accountId": "wrap.near",
+      "at": "2026-11-03T12:54:48.305Z",
+      "kind": "baseline",
+      "report": {
+        "anchor": {
+          "height": 222872697,
+          "hash": "Gk7jf9NLvAavMisVxA9Ci6TTzDCczMsnkbzgcbYtsUNs",
+          "blockTime": "2026-11-03T12:54:45.905Z",
+          "fetchedAt": "2026-11-03T12:54:48.124Z",
+          "source": "https://free.rpc.fastnear.com"
+        },
+        "message": "已建立完整基线；后续从这个区块开始核对。"
+      }
+    },
+    {
+      "seq": 2,
+      "accountId": "wrap.near",
+      "at": "2026-11-03T12:57:53.986Z",
+      "kind": "changes",
+      "report": {
+        "from": {
+          "height": 222872697,
+          "hash": "Gk7jf9NLvAavMisVxA9Ci6TTzDCczMsnkbzgcbYtsUNs",
+          "blockTime": "2026-11-03T12:54:45.905Z",
+          "fetchedAt": "2026-11-03T12:54:48.124Z",
+          "source": "https://free.rpc.fastnear.com"
+        },
+        "to": {
+          "height": 222873016,
+          "hash": "81tLM6bu9m1FyaXcALZ1RWetnYFcQFRYd4kXrdX4fagd",
+          "blockTime": "2026-11-03T12:57:50.621Z",
+          "fetchedAt": "2026-11-03T12:57:53.164Z",
+          "source": "https://free.rpc.fastnear.com"
+        },
+        "rules": {
+          "balances": true,
+          "keys": true,
+          "code": true,
+          "thresholds": {
+            "NEAR": "1",
+            "USDC": "10",
+            "USDT": "10",
+            "wNEAR": "1"
+          }
+        },
+        "balances": [
+          {
+            "symbol": "NEAR",
+            "status": "verified",
+            "beforeAtomic": "34903962234728232736226286563482",
+            "afterAtomic": "34900948675291184323923754179404",
+            "deltaAtomic": "-3013559437048412302532384078",
+            "before": "34903962.234728232736226286563482",
+            "after": "34900948.675291184323923754179404",
+            "delta": "-3013.559437048412302532384078"
+          },
+          {
+            "symbol": "NEAR locked",
+            "status": "verified",
+            "beforeAtomic": "0",
+            "afterAtomic": "0",
+            "deltaAtomic": "0",
+            "before": "0",
+            "after": "0",
+            "delta": "0"
+          },
+          {
+            "symbol": "USDC",
+            "status": "verified",
+            "beforeAtomic": "1216197351",
+            "afterAtomic": "1216197351",
+            "deltaAtomic": "0",
+            "before": "1216.197351",
+            "after": "1216.197351",
+            "delta": "0"
+          },
+          {
+            "symbol": "USDT",
+            "status": "verified",
+            "beforeAtomic": "10958731",
+            "afterAtomic": "10958731",
+            "deltaAtomic": "0",
+            "before": "10.958731",
+            "after": "10.958731",
+            "delta": "0"
+          },
+          {
+            "symbol": "wNEAR",
+            "status": "verified",
+            "beforeAtomic": "107550764923243453203839068",
+            "afterAtomic": "107550764923243453203839068",
+            "deltaAtomic": "0",
+            "before": "107.550764923243453203839068",
+            "after": "107.550764923243453203839068",
+            "delta": "0"
+          }
+        ],
+        "permissions": {
+          "status": "verified",
+          "counts": {
+            "added": 0,
+            "removed": 0,
+            "changed": 0
+          },
+          "publicKeys": [],
+          "detailsTruncated": false
+        },
+        "contract": {
+          "status": "verified",
+          "before": "DL2f5xmZ44cQRP6vBMt94rvseH5d5KKnAGis2WkTAsh1",
+          "after": "DL2f5xmZ44cQRP6vBMt94rvseH5d5KKnAGis2WkTAsh1",
+          "changed": false
+        },
+        "findings": [
+          {
+            "kind": "balance_change",
+            "detail": "NEAR 净变化 -3013.559437048412302532384078；不代表一笔转账，也不自动归因手续费。",
+            "symbol": "NEAR",
+            "deltaAtomic": "-3013559437048412302532384078"
+          }
+        ],
+        "findingCount": 1,
+        "scope": "两个final快照的净变化；不是完整流水、被盗判定或安全审计。权限公钥最多展示20条，变化摘要最多30条。"
+      }
+    }
+  ]
+}

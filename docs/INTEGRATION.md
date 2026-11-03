@@ -17,7 +17,7 @@ Links only fill fixed public inputs. The user must click Query to read mainnet d
 
 ## Quick start
 
-Requires **Node.js 22+** and npm.
+Requires **Node.js 22.16+** and npm.
 
 ```sh
 git clone https://github.com/yinbowen-dc/FlowTrace.git
@@ -113,3 +113,7 @@ curl https://www.darkchunk.win/collect/api/agent/run \
 | `transfer_preflight` | FT transfer checks and an unsigned request for wallet review. |
 
 `lookbackBlocks` is an integer from **1 to 5000**, default **100**. It is a height difference; the report returns the actual time interval. Amount inputs use decimal strings and exact atomic units.
+
+## Server-side account observation
+
+See [account observation](WATCH.md) for the opt-in background worker, anonymous browser sessions, SQLite deployment, retention and strict HTTP endpoints. The eight existing MCP tools remain on-demand and do not inherit a browser watch session.

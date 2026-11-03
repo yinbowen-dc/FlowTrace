@@ -9,13 +9,16 @@ import {createMcpServer} from './mcp/server.mjs';
 import {createAgentService} from './agent/service.mjs';
 import {createChatService,validateChat} from './agent/chat.mjs';
 import {VERSION} from './version.mjs';
+import {createWatchStore} from './watch/store.mjs';
+import {createWatchService} from './watch/service.mjs';
 export {VERSION};
 const root=fileURLToPath(new URL('./public/',import.meta.url));
 const mime={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.svg':'image/svg+xml','.png':'image/png','.csv':'text/csv; charset=utf-8','.json':'application/json; charset=utf-8','.md':'text/markdown; charset=utf-8','.yaml':'text/plain; charset=utf-8'};
-export function createServer({adapters=createAdapters(),basePath=process.env.BASE_PATH||'',limit=60,allowedHosts=(process.env.ALLOWED_HOSTS||'localhost,127.0.0.1,[::1],www.darkchunk.win').split(','),chatService,chatDailyLimit=Math.max(1,Number.parseInt(process.env.CHAT_DAILY_LIMIT)||40)}={}){
+export function createServer({adapters=createAdapters(),basePath=process.env.BASE_PATH||'',limit=60,allowedHosts=(process.env.ALLOWED_HOSTS||'localhost,127.0.0.1,[::1],www.darkchunk.win').split(','),chatService,watchService,watchDbPath=process.env.WATCH_DB_PATH,chatDailyLimit=Math.max(1,Number.parseInt(process.env.CHAT_DAILY_LIMIT)||40)}={}){
   const buckets=new Map(),chatBuckets=new Map();let concurrent=0,chatActive=false,chatDay='',chatCount=0;
   const service=createAgentService({adapters}),mcp=createMcpHandler(()=>createMcpServer({service}),{legacy:'stateless',responseMode:'json',maxRequestBodySize:8192,maxSubscriptions:0});
   const chat=chatService||createChatService({service});
+  const watch=watchService||(watchDbPath?createWatchService({store:createWatchStore({path:watchDbPath}),service}):null);
   const mcpRequest=toNodeHandler(mcp,{maxRequestBodySize:8192});
   const server=http.createServer(async(req,res)=>{
     const requestId=crypto.randomUUID();res.setHeader('X-Request-Id',requestId);res.setHeader('X-Content-Type-Options','nosniff');res.setHeader('Referrer-Policy','no-referrer');res.setHeader('X-Frame-Options','DENY');
@@ -28,8 +31,8 @@ export function createServer({adapters=createAdapters(),basePath=process.env.BAS
       if(basePath){if(path===basePath){res.writeHead(308,{location:basePath+'/'});res.end();return;}if(!path.startsWith(basePath+'/'))throw new QueryError('NOT_FOUND','页面不存在',404);path=path.slice(basePath.length);}
       if(path==='/api/health'){if(req.method!=='GET')throw new QueryError('METHOD','仅支持GET',405);json(200,{ok:true,version:VERSION,service:'FlowTrace',time:new Date().toISOString()});return;}
       if(path.startsWith('/api/')||path==='/mcp'){
-        const isMcp=path==='/mcp',get=['/api/network','/api/public-sample','/api/agent/catalog','/api/agent/chat/status'].includes(path);
-        if(!isMcp&&!['/api/network','/api/public-sample','/api/provider-status','/api/near-receipt','/api/agent/catalog','/api/agent/run','/api/agent/chat','/api/agent/chat/status'].includes(path))throw new QueryError('NOT_FOUND','接口不存在',404);
+        const isMcp=path==='/mcp',get=['/api/network','/api/public-sample','/api/agent/catalog','/api/agent/chat/status','/api/watch/status'].includes(path);
+        if(!isMcp&&!['/api/network','/api/public-sample','/api/provider-status','/api/near-receipt','/api/agent/catalog','/api/agent/run','/api/agent/chat','/api/agent/chat/status','/api/watch/status','/api/watch/add','/api/watch/action','/api/watch/events'].includes(path))throw new QueryError('NOT_FOUND','接口不存在',404);
         if(req.method!==(get?'GET':'POST'))throw new QueryError('METHOD',get?'仅支持GET':'仅支持POST只读查询',405);
         if([...url.searchParams].length)throw new QueryError('INVALID_INPUT','请勿在URL中传递查询字段',400);
         const origin=req.headers.origin;
@@ -42,7 +45,18 @@ export function createServer({adapters=createAdapters(),basePath=process.env.BAS
         let body={};if(!get){if(!req.headers['content-type']?.startsWith('application/json'))throw new QueryError('CONTENT_TYPE','请求体需要application/json',415);
           let size=0,parts=[];for await(const chunk of req){size+=chunk.length;if(size>8192)throw new QueryError('TOO_LARGE','查询请求过大',413);parts.push(chunk);}try{body=JSON.parse(Buffer.concat(parts).toString());}catch{throw new QueryError('INVALID_JSON','查询JSON格式不正确',400);}
           if(!body||typeof body!=='object'||Array.isArray(body))throw new QueryError('INVALID_INPUT','查询字段应为对象',400);
-          const fields=path==='/api/agent/chat'?['messages']:path==='/api/agent/run'?['task','input']:path==='/api/provider-status'?['depositAddress','depositMemo']:['txHash','senderAccountId','recipient','tokenContract'];if(Object.keys(body).some(k=>!fields.includes(k)))throw new QueryError('INVALID_INPUT','包含不支持的查询字段',400);
+          const fields=path==='/api/watch/add'?['accountId','rules']:path==='/api/watch/action'?['id','action']:path==='/api/watch/events'?['before']:path==='/api/agent/chat'?['messages']:path==='/api/agent/run'?['task','input']:path==='/api/provider-status'?['depositAddress','depositMemo']:['txHash','senderAccountId','recipient','tokenContract'];if(Object.keys(body).some(k=>!fields.includes(k)))throw new QueryError('INVALID_INPUT','包含不支持的查询字段',400);
+        }
+        if(path.startsWith('/api/watch/')){
+          if(!watch){if(path==='/api/watch/status'){json(200,{ok:true,data:{enabled:false,hasSession:false,watches:[],events:[]}});return;}throw new QueryError('WATCH_DISABLED','后台观察服务未启用',503);}
+          const token=(req.headers.cookie||'').split(';').map(s=>s.trim()).find(s=>s.startsWith('flowtrace_watch='))?.slice(16);
+          let data,sessionToken;
+          if(path==='/api/watch/status')data=watch.status(token);
+          else if(path==='/api/watch/add')({data,sessionToken}=watch.add(token,body));
+          else if(path==='/api/watch/events')data=watch.events(token,body);
+          else data=watch.action(token,body);
+          if(sessionToken||data.hasSession){const value=sessionToken||token;res.setHeader('Set-Cookie',`flowtrace_watch=${value}; Path=${basePath||''}/; HttpOnly; SameSite=Strict; Max-Age=604800${['localhost','127.0.0.1','[::1]'].includes(hostname)?'':'; Secure'}`);}
+          json(200,{ok:true,requestId,data});return;
         }
         if(path==='/api/agent/chat/status'){json(200,{ok:true,data:{...chat.status(),limits:{perIpPerMinute:2,dailyRequests:chatDailyLimit,concurrent:1},quotaScope:'进程内计数，服务重启后重置'}});return;}
         if(path==='/api/agent/chat'){
@@ -65,7 +79,7 @@ export function createServer({adapters=createAdapters(),basePath=process.env.BAS
       res.writeHead(200,{'content-type':mime[extname(file)],'cache-control':'no-cache'});res.end(req.method==='HEAD'?undefined:buffer);
     }catch(e){json(e instanceof QueryError?e.status:500,{ok:false,requestId,error:{code:e.code||'INTERNAL',message:e instanceof QueryError?e.message:'查询未完成，请稍后重试'}});}
   });
-  server.on('close',()=>{void mcp.close();void chat.close?.();});
+  server.on('close',()=>{void mcp.close();void chat.close?.();void watch?.close();});
   return server;
 }
 if(process.argv[1]&&resolve(process.argv[1])===fileURLToPath(import.meta.url)){

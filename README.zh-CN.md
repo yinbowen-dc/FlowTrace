@@ -12,6 +12,18 @@
 </p>
 <p align="center"><strong>NEAR 主网</strong> · 8 个 MCP 工具 · <a href="LICENSE">MIT 开源</a></p>
 
+## 👁️ 后台盯账户，回来就看变化。
+
+把常看的账户放进观察列表。服务器约每3分钟核对一次余额、公钥和代码；达到你设定规则的变化，会进入站内事件流。**关闭网页后也会继续采集**，默认每次观察24小时，可暂停、续期和导出报告。
+
+每个浏览器最多3个账户。查询未知会保留上次完整基线；这是两端净变化观察，不是完整流水或被盗判定。
+
+[![正式网站的账户观察列表与自动采集的主网变化事件](docs/assets/account-watch.png)](https://www.darkchunk.win/collect/agent/#watch)
+
+<sub>2026-11-03 正式网站实拍。两个公开账户与后台自动产生的变化事件，数值为历史数据。</sub>
+
+**[开启后台观察 →](https://www.darkchunk.win/collect/agent/#watch)** · [规则、数据与部署说明](docs/WATCH.md)
+
 ## 🔎 刚才，账户里发生了什么？
 
 余额变了多少？有没有新增公钥？合约代码动过吗？
@@ -104,34 +116,34 @@ FlowTrace 会检查 **FT 余额、收款账户、代币存储注册、费用缓�
 2. 点击 **填入公开示例 → 查询两个区块并核对**。
 3. 看变化、看区块，下载你的第一份 JSON 报告。
 
-想跑自己的版本？**Node.js 22+**，四行启动：
+想跑自己的版本？**Node.js 22.16+**，四行启动：
 
 ```sh
 git clone https://github.com/yinbowen-dc/FlowTrace.git
 cd FlowTrace
 npm ci
-npm start
+WATCH_DB_PATH=./runtime/watch.sqlite npm start
 ```
 
 打开 **http://127.0.0.1:8804/agent/**。手动、MCP 和 REST 不需要模型密钥；AI 对话需服务端配置，见[接入指南](docs/INTEGRATION.md)。
 
 ## 🛠️ 已经能用，接着往前做
 
-当前是 **v0.4.1 MVP**。网页对话、手动检查、8 个 MCP 工具、4 条任务流程已实现；v0.4.1 通过 **81 项测试**，真实主网、MCP 客户端和模型工具调用另行核验。
+当前是 **v0.5.0 MVP**。网页对话、手动检查、8 个 MCP 工具、4 条任务流程已实现；v0.5.0 通过 **96 项测试**，真实主网、MCP 客户端和模型工具调用另行核验。
 
-接下来想加：**观察列表 → 定时采集 → 变化提醒**，以及历史流水与商家订单系统对接。**这些还没上线**，欢迎来一起做。
+已加入**服务器观察列表、周期采集和站内事件**。下一步继续扩展历史流水与商家订单系统对接；这些扩展尚未实现。
 
-[执行计划 →](docs/PLAN.md) · [v0.4.1 更新 →](docs/RELEASE-v0.4.1.md) · [提个想法或 Bug →](https://github.com/yinbowen-dc/FlowTrace/issues) · [参与贡献 →](CONTRIBUTING.md) · [主网核验记录 →](examples/account-changes-verification.json) · [离线支付证据 →](examples/README.md)
+[执行计划 →](docs/PLAN.md) · [v0.5.0 更新 →](docs/RELEASE-v0.5.0.md) · [提个想法或 Bug →](https://github.com/yinbowen-dc/FlowTrace/issues) · [参与贡献 →](CONTRIBUTING.md) · [主网核验记录 →](examples/account-changes-verification.json) · [离线支付证据 →](examples/README.md)
 
 <details>
 <summary>使用前了解一下：数据、范围与限制</summary>
 
-- NEAR 主网数据按需查询；没有后台持续监控、主动告警或套利执行。
+- MCP 与单次任务按需查询；网页可单独开启有期限的后台观察和站内事件，不含外部通知或套利执行。
 - 账户资产覆盖原生 NEAR 和 USDC、USDT、wNEAR；不含其他 FT、NFT、质押池份额或 Intents 内部余额。
 - 两个快照只显示净变化。净额为零不代表没发生交易，公钥变化也不等于被盗。历史查询失败保留未知。
 - 单笔收款核对不证明订单归属、整条跨链结算或来源链退款；渠道成功不能单独证明商家到账。
 - 转账预检不是合约仿真或执行保证。不持有私钥，不签名、广播、兑换或退款。FunctionCall key 的 allowance 是 Gas 预算。
-- 对话消息和必要工具结果会发送 OpenAI，本服务不持久化对话正文。导入订单留在浏览器未加密的 localStorage；不要输入私钥、助记词或 API 密钥。
+- 对话消息和必要工具结果会发送 OpenAI，本服务不持久化对话正文。后台观察会保存单独启用的账户、基线和事件，使用浏览器会话隔离；见[观察数据说明](docs/WATCH.md)。导入订单留在浏览器未加密的 localStorage；不要输入私钥、助记词或 API 密钥。
 - 公共服务有速率与并发限制，无生产 SLA；RPC 数据是上游观察，不是独立轻客户端证明。网页当前为中文。
 
 完整说明见[数据与接口文档](public/agent/guide.md)。[视觉素材来源](docs/assets/README.md)。

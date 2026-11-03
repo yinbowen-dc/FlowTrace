@@ -26,13 +26,22 @@ Make the public journey work from the README to a useful mainnet check, then pre
 - Prepared current screenshots, a 13-second MP4 step replay and an X-post draft. The owner still needs to publish the public post.
 - Submission materials are prepared. X publication and official submission are deferred for now; they are not part of the remaining work for this release.
 
-## Release boundary
+## v0.4.1 release boundary
 
 This pass improves the product presentation and demo journey. It does not add custody, signing, trading, background monitoring or alerts. Those require their own product and operating design.
 
-## Verification
+## v0.4.1 verification
 
 - 81 tests passed locally on Node.js 25.9.0 and on the server with Node.js 22.23.4.
 - 28 deployed runtime files match the verified release source byte for byte.
 - [v0.4.1 release notes](RELEASE-v0.4.1.md) include the four shareable demo links and scope.
 - Official application is not submitted. X publication and final form review are deferred; the private draft and prepared media are retained for later.
+
+## 4. Persistent account observation — complete
+
+- Implemented leased server-side snapshot collection, per-browser private lists, precise thresholds, in-app events and pause/resume/extend controls.
+- Preserve complete baselines through unknown observations and bound queue, storage and upstream request reuse.
+- Verified cookie scope, owner isolation, persistence across restart and collection while the browser is closed.
+- Passed 96 tests locally and on Node 22; checked desktop and 390px phone layouts. Deployed v0.5.0 with a dedicated persistent volume, 31 matching runtime files and the previous container retained for rollback.
+- Public health, the eight MCP tools and real mainnet watch baselines were checked separately. See [v0.5.0 release notes](RELEASE-v0.5.0.md).
+- X publication and contest submission remain deferred by the owner.
