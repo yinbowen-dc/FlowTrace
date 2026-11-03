@@ -2,7 +2,7 @@
   <a href="https://www.darkchunk.win/collect/agent/"><img src="docs/assets/flowtrace-hero.png" width="100%" alt="FlowTrace：用链上数据给 Agent 一双眼睛" /></a>
 </p>
 
-<h2 align="center">给你的 Agent，装上链上视野。</h2>
+<h2 align="center">给 Agent，一双链上眼睛。</h2>
 <p align="center">一句话查账户 · 看余额和权限怎么变 · 转账前先查一遍</p>
 <p align="center">
   <a href="https://www.darkchunk.win/collect/agent/"><strong>🚀 在线试试</strong></a> ·
@@ -10,7 +10,7 @@
   <a href="#-给你自己的-agent-也接上">🧩 接你的 Agent</a> ·
   <a href="README.md">English</a>
 </p>
-<p align="center"><strong>NEAR 主网</strong> &nbsp; / &nbsp; 8 个 MCP 工具 &nbsp; / &nbsp; 4 条业务流程 &nbsp; / &nbsp; <a href="LICENSE">MIT 开源</a></p>
+<p align="center"><strong>NEAR 主网</strong> · 8 个 MCP 工具 · <a href="LICENSE">MIT 开源</a></p>
 
 ## 🔎 刚才，账户里发生了什么？
 

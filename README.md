@@ -10,7 +10,7 @@
   <a href="#-give-your-own-agent-the-tools">🧩 Connect your agent</a> ·
   <a href="README.zh-CN.md">简体中文</a>
 </p>
-<p align="center"><strong>NEAR mainnet</strong> &nbsp; / &nbsp; 8 MCP tools &nbsp; / &nbsp; 4 workflows &nbsp; / &nbsp; <a href="LICENSE">MIT open source</a></p>
+<p align="center"><strong>NEAR mainnet</strong> · 8 MCP tools · <a href="LICENSE">MIT</a></p>
 
 ## 🔎 What just changed in this account?
 
