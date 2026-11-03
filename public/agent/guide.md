@@ -1,4 +1,4 @@
-# FlowTrace NEAR Agent Toolkit · v0.5.1
+# FlowTrace NEAR Agent Toolkit · v0.6.0
 
 给人和Agent提供NEAR业务查询和规则预检。包含网页自然语言对话、手动操作、8个MCP工具、4个固定任务流程和一个配套Skill。手动、MCP和任务API直接查询，无需模型密钥；网页AI对话由服务端OpenAI Agents SDK调用同一套确定性服务。所有入口均不需要钱包私钥，也不签名或广播。
 
@@ -140,3 +140,11 @@ curl https://www.darkchunk.win/collect/api/agent/run \
 列表与事件存于服务端SQLite，通过HttpOnly、SameSite=Strict会话Cookie隔离，正式站点Cookie带Secure。数据库仅存会话令牌哈希；没有跨设备登录或找回，清除站点数据会失去列表访问。会话连续7天不访问后清理，保留最近100条站内事件，每次加载20条；删除观察会连同事件移除。导出仅含当前列表与已加载事件，不含Cookie。
 
 启用：设置WATCH_DB_PATH到非public目录的SQLite路径。Docker需挂载持久卷供node用户写入；根文件系统仍只读。完整规则与接口见公开仓库docs/WATCH.md。现有8个MCP工具和4条单次任务不变；后台观察使用独立、同源会话范围的网页接口。
+
+## v0.6 支付排查工作台
+
+入口：https://www.darkchunk.win/collect/agent/payments/ 。保存订单声明、关联NEAR交易后，点击按钮读取主网核验。页面比较应收、实际净到账与差额，保留最近10次核验和30条操作记录；关联修改后当前报告失效，旧报告留在历史。同一浏览器中多张订单复用收据会相互提示，归档保留关联，支持恢复。
+
+订单使用独立HttpOnly会话Cookie，服务端SQLite持久化；每浏览器20张（含归档），全站200张、100个会话。7天不访问后会话失效，清除站点数据无法找回。设置WATCH_DB_PATH时自动使用同目录payments.sqlite，也可独立设置PAYMENTS_DB_PATH。
+
+本次仅核验NEAR及可选1Click渠道报告。来源链交易标识仅保存为线索；来源链入金、退款、报价归属和商家数据库尚未独立核验。SUCCESS与REFUNDED不能替代到账或退款证据。没有自动复查、外部通知或资金执行。现有MCP与对话仍按次查询，保存订单使用独立网页接口；完整说明见公开仓库docs/PAYMENTS.md。

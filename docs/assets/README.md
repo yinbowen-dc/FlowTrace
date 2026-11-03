@@ -4,6 +4,7 @@ The README combines conceptual brand artwork with real browser captures. They se
 
 | Asset | Source and scope |
 | --- | --- |
+| `payments-workspace.png` | Cropped v0.6.0 production-browser capture showing two constructed orders referencing the same public historical NEAR FT receipt, an exact 0.536146 USDC shortfall and same-session duplicate warnings. Account IDs and amounts are historical public example data; no real merchant order, wallet secret or session token is shown. |
 | `flowtrace-hero.png` | Original conceptual artwork created with the built-in image_gen tool. It is brand art, not an application screenshot. |
 | `account-changes-demo.gif` | Three real browser captures of a public `wrap.near` mainnet comparison on November 3, 2026, encoded into a looping step replay. Waiting time is compressed and the result is held for reading; playback duration is not a latency claim. |
 | `agent-chat.png` | Cropped browser capture of an actual chat calling `compare_account`, with public-account data and finalized block anchors. |

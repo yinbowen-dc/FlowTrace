@@ -6,6 +6,7 @@ COPY server.mjs adapters.mjs version.mjs ./
 COPY agent ./agent
 COPY mcp ./mcp
 COPY watch ./watch
+COPY payments ./payments
 COPY public ./public
 USER node
 ENV HOST=0.0.0.0 PORT=8796 BASE_PATH=/collect

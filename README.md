@@ -12,6 +12,16 @@
 </p>
 <p align="center"><strong>NEAR mainnet</strong> · 8 MCP tools · <a href="LICENSE">MIT</a></p>
 
+## 🧾 Follow a payment from claim to evidence
+
+Save an order, associate a real NEAR transaction and compare the receipt with the declared amount. The workspace keeps check history and flags receipt reuse across your saved orders. Channel reports and missing source-chain evidence remain separate.
+
+[![Production payment workspace with verified receipt, exact shortfall and duplicate-order warning](docs/assets/payments-workspace.png)](https://www.darkchunk.win/collect/agent/payments/)
+
+<sub>Production capture, November 3, 2026. Two constructed orders reference the same public historical receipt; no funds were moved.</sub>
+
+**[Open the payment workspace →](https://www.darkchunk.win/collect/agent/payments/)** · [Scope and API](docs/PAYMENTS.md)
+
 ## 👁️ Close the tab. Come back to the changes.
 
 Add an account to your watchlist. The server checks balances, keys and code approximately every three minutes and records changes that meet your rules. **Collection continues while the browser is closed**, for a renewable 24-hour observation lease. Pause, resume and export reports from the console.
@@ -129,11 +139,11 @@ Open the [local console](http://127.0.0.1:8804/agent/). Manual forms, MCP and RE
 
 ## 🛠️ Working today. More to build.
 
-This is **v0.5.1 MVP**: web chat, manual checks, 8 MCP tools and 4 workflows are implemented. The v0.5.1 release passed **97 tests**; mainnet, MCP-client and real model-tool checks were performed separately.
+This is **v0.6.0 MVP**: web chat, manual checks, 8 MCP tools and 4 workflows are implemented. The v0.6.0 release passed **110 tests**; mainnet, MCP-client and real model-tool checks were performed separately.
 
 Server-side watchlists, periodic snapshots and in-app events are now available. Transaction-history indexing and merchant order integration are next; those extensions are not implemented.
 
-[Plan →](docs/PLAN.md) · [v0.5.1 release →](docs/RELEASE-v0.5.1.md) · [Ideas and bugs →](https://github.com/yinbowen-dc/FlowTrace/issues) · [Contribute →](CONTRIBUTING.md) · [Mainnet verification →](examples/account-changes-verification.json) · [Offline payment evidence →](examples/README.md)
+[Plan →](docs/PLAN.md) · [v0.6.0 release →](docs/RELEASE-v0.6.0.md) · [Ideas and bugs →](https://github.com/yinbowen-dc/FlowTrace/issues) · [Contribute →](CONTRIBUTING.md) · [Mainnet verification →](examples/account-changes-verification.json) · [Offline payment evidence →](examples/README.md)
 
 <details>
 <summary>Before you use it: data, scope and limits</summary>
@@ -143,7 +153,7 @@ Server-side watchlists, periodic snapshots and in-app events are now available. 
 - Comparisons show net snapshot differences. Zero net movement does not establish inactivity; a key change does not establish theft. Historical-data failures remain unknown.
 - A payment check does not prove invoice ownership, full cross-chain settlement or source-chain refunds. Channel success alone is not merchant-receipt proof.
 - Preflight is not simulation or an execution guarantee. FlowTrace does not hold keys, sign, broadcast, swap or refund. FunctionCall key allowance is a gas budget.
-- Chat messages and needed tool results go to OpenAI; the service does not persist chat bodies. Opt-in watches store selected accounts, baselines and events in browser-session isolation; see [watch data handling](docs/WATCH.md). Imported orders remain in the browser's unencrypted localStorage. Never enter wallet secrets or API keys.
+- Chat messages and needed tool results go to OpenAI; the service does not persist chat bodies. Opt-in watches store selected accounts, baselines and events in browser-session isolation; see [watch data handling](docs/WATCH.md). The payment workspace stores orders, associations and check history server-side; see [payment data handling](docs/PAYMENTS.md). The earlier receipt-replay page keeps imported orders in the browser's unencrypted localStorage. Never enter wallet secrets or API keys.
 - Public endpoints have rate and concurrency limits and no production SLA. RPC data is an upstream observation, not an independent light-client proof. The web UI is currently in Chinese.
 
 See the [full data and integration guide](public/agent/guide.md) (Chinese) and [visual asset notes](docs/assets/README.md).

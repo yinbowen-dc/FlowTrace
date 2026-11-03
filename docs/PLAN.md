@@ -52,3 +52,10 @@ This pass improves the product presentation and demo journey. It does not add cu
 - Found and reproduced a second-turn chat serialization error, fixed the assistant-history conversion and added a real-SDK regression test.
 - Passed 97 tests locally and on Node 22, then deployed v0.5.1 while preserving both watches and all existing events.
 - Verified a live continued conversation returning the blocked result for unchanged 0.01 / 0.001 wNEAR parameters. See [v0.5.1](RELEASE-v0.5.1.md).
+
+## 6. Persistent payment operations — complete
+
+- Added saved order claims, explicit receipt checks, evidence gaps, retained history, archive/restore and same-session receipt reuse detection.
+- Verified 110 tests locally and on Node 22, a staging restart with a real receipt, desktop/phone layouts and public two-order duplicate detection.
+- Deployed v0.6.0 in the existing persistent volume; 36 runtime files match source. Existing account watches and events were retained. See [v0.6.0](RELEASE-v0.6.0.md).
+- Source-chain receipt/refund verification, quote association and merchant database integration remain future work. Hackathon and X submission remain deferred.

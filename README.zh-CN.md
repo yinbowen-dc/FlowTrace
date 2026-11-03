@@ -12,6 +12,16 @@
 </p>
 <p align="center"><strong>NEAR 主网</strong> · 8 个 MCP 工具 · <a href="LICENSE">MIT 开源</a></p>
 
+## 🧾 这笔钱，走到哪一步了？
+
+保存订单，关联真实交易，再把应收、实际到账和差额放在同一处核对。核验历史会保留；同一收据被多张订单引用时，两边都会提示。渠道报告与来源链证据分开展示，未知如实保留。
+
+[![正式支付工作台：真实到账、精确差额与重复收据提示](docs/assets/payments-workspace.png)](https://www.darkchunk.win/collect/agent/payments/)
+
+<sub>2026-11-03 正式网站实拍。两张构造订单关联同一笔公开历史收据；没有执行资金操作。</sub>
+
+**[打开支付排查工作台 →](https://www.darkchunk.win/collect/agent/payments/)** · [功能与接口说明](docs/PAYMENTS.md)
+
 ## 👁️ 后台盯账户，回来就看变化。
 
 把常看的账户放进观察列表。服务器约每3分钟核对一次余额、公钥和代码；达到你设定规则的变化，会进入站内事件流。**关闭网页后也会继续采集**，默认每次观察24小时，可暂停、续期和导出报告。
@@ -129,11 +139,11 @@ WATCH_DB_PATH=./runtime/watch.sqlite npm start
 
 ## 🛠️ 已经能用，接着往前做
 
-当前是 **v0.5.1 MVP**。网页对话、手动检查、8 个 MCP 工具、4 条任务流程已实现；v0.5.1 通过 **97 项测试**，真实主网、MCP 客户端和模型工具调用另行核验。
+当前是 **v0.6.0 MVP**。网页对话、手动检查、8 个 MCP 工具、4 条任务流程已实现；v0.6.0 通过 **110 项测试**，真实主网、MCP 客户端和模型工具调用另行核验。
 
 已加入**服务器观察列表、周期采集和站内事件**。下一步继续扩展历史流水与商家订单系统对接；这些扩展尚未实现。
 
-[执行计划 →](docs/PLAN.md) · [v0.5.1 更新 →](docs/RELEASE-v0.5.1.md) · [提个想法或 Bug →](https://github.com/yinbowen-dc/FlowTrace/issues) · [参与贡献 →](CONTRIBUTING.md) · [主网核验记录 →](examples/account-changes-verification.json) · [离线支付证据 →](examples/README.md)
+[执行计划 →](docs/PLAN.md) · [v0.6.0 更新 →](docs/RELEASE-v0.6.0.md) · [提个想法或 Bug →](https://github.com/yinbowen-dc/FlowTrace/issues) · [参与贡献 →](CONTRIBUTING.md) · [主网核验记录 →](examples/account-changes-verification.json) · [离线支付证据 →](examples/README.md)
 
 <details>
 <summary>使用前了解一下：数据、范围与限制</summary>
@@ -143,7 +153,7 @@ WATCH_DB_PATH=./runtime/watch.sqlite npm start
 - 两个快照只显示净变化。净额为零不代表没发生交易，公钥变化也不等于被盗。历史查询失败保留未知。
 - 单笔收款核对不证明订单归属、整条跨链结算或来源链退款；渠道成功不能单独证明商家到账。
 - 转账预检不是合约仿真或执行保证。不持有私钥，不签名、广播、兑换或退款。FunctionCall key 的 allowance 是 Gas 预算。
-- 对话消息和必要工具结果会发送 OpenAI，本服务不持久化对话正文。后台观察会保存单独启用的账户、基线和事件，使用浏览器会话隔离；见[观察数据说明](docs/WATCH.md)。导入订单留在浏览器未加密的 localStorage；不要输入私钥、助记词或 API 密钥。
+- 对话消息和必要工具结果会发送 OpenAI，本服务不持久化对话正文。后台观察会保存单独启用的账户、基线和事件，使用浏览器会话隔离；见[观察数据说明](docs/WATCH.md)。支付工作台另行在服务端保存订单、关联和核验历史，见[支付数据说明](docs/PAYMENTS.md)。原收款回放页导入的订单留在浏览器未加密的 localStorage；不要输入私钥、助记词或 API 密钥。
 - 公共服务有速率与并发限制，无生产 SLA；RPC 数据是上游观察，不是独立轻客户端证明。网页当前为中文。
 
 完整说明见[数据与接口文档](public/agent/guide.md)。[视觉素材来源](docs/assets/README.md)。

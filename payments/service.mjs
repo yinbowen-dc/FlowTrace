@@ -1,0 +1,40 @@
+import {z} from 'zod';
+import {QueryError} from '../adapters.mjs';
+import {accountId,txHash,atomic,decimal,ASSETS} from '../public/lib/core.js';
+const account=z.string().refine(accountId,'需要有效的NEAR账户'),hash=z.string().refine(txHash,'交易哈希需要32字节Base58'),asset=z.enum(['USDC','USDT','wNEAR']);
+const linksSchema=z.strictObject({txHash:hash.optional(),senderAccountId:account.optional(),merchantStatus:z.enum(['unknown','unpaid','paid','refunded']).default('unknown'),depositAddress:z.string().regex(/^[A-Za-z0-9:_.-]{5,128}$/).optional(),depositMemo:z.string().max(256).regex(/^[^\u0000-\u001f]*$/).optional(),sourceChain:z.enum(['unspecified','near','ethereum','base','solana','bitcoin','other']).default('unspecified'),sourceTx:z.string().regex(/^[A-Za-z0-9:_-]{8,160}$/).optional()}).refine(x=>!!x.txHash===!!x.senderAccountId,'NEAR交易哈希和交易签名账户需一起填写').refine(x=>!x.depositMemo||!!x.depositAddress,'Memo需与1Click入金地址一起填写').refine(x=>!x.sourceTx||x.sourceChain!=='unspecified','填写来源交易时需选择来源链');
+const createSchema=z.strictObject({reference:z.string().trim().min(1).max(60).regex(/^[\p{L}\p{N} _./:-]+$/u,'订单编号请用文字、数字或常见分隔符'),recipient:account,asset,expectedAmount:z.string().max(70).regex(/^\d{1,39}(?:\.\d+)?$/),createdAt:z.iso.datetime({offset:true}),dueAt:z.iso.datetime({offset:true}),links:linksSchema.default(()=>({merchantStatus:'unknown',sourceChain:'unspecified'}))}).refine(x=>{try{const n=BigInt(atomic(x.expectedAmount,ASSETS[x.asset].decimals));return n>0n&&n<(1n<<128n);}catch{return false;}},'应收金额必须大于0且符合代币精度').refine(x=>Date.parse(x.dueAt)>Date.parse(x.createdAt),'截止时间需晚于订单创建时间');
+const idSchema=z.strictObject({id:z.uuid()}),revisionFields={id:z.uuid(),revision:z.number().int().min(1).max(Number.MAX_SAFE_INTEGER)};
+const linkSchema=z.strictObject({...revisionFields,links:linksSchema}),checkSchema=z.strictObject(revisionFields),archiveSchema=z.strictObject({...revisionFields,archived:z.boolean()});
+function parse(schema,input){const p=schema.safeParse(input);if(!p.success)throw new QueryError('INVALID_INPUT',p.error.issues.slice(0,2).map(x=>x.message).join('；'),400);return p.data;}
+const labels={needs_check:['待核验NEAR收款','neutral'],needs_transaction:['待关联NEAR交易','neutral'],query_unknown:['本轮查询未知','amber'],near_unconfirmed:['NEAR到账待核验','amber'],underpaid:['NEAR到账不足','red'],overpaid:['NEAR超额到账','amber'],near_matched:['NEAR收款核验一致','green'],ledger_unknown:['NEAR金额一致 · 记账未知','amber'],ledger_gap:['NEAR已到账 · 记账待核对','amber'],evidence_conflict:['证据存在差异','red'],refund_unverified:['渠道报告退款 · 来源链未核验','amber'],duplicate:['收据重复关联 · 待处理','red']};
+function decorate(order){const state=order.conflicts.length?'duplicate':order.report?.state||(order.links.txHash||order.links.depositAddress?'needs_check':'needs_transaction'),[label,tone]=labels[state]||labels.near_unconfirmed;return {...order,assessment:{state,label,tone,received:order.report?.near?.received??null,duplicateCount:order.conflicts.length}};}
+export function createPaymentService({store,service,clock=Date.now,maxConcurrent=2}={}){
+ let running=0;
+ const status=token=>{const data=store.list(token,clock()),orders=data.orders.map(row=>{const d=decorate(row);return {id:d.id,reference:d.reference,terms:d.terms,links:d.links,state:d.state,revision:d.revision,checkedAt:d.checkedAt,lastAttemptAt:d.lastAttemptAt,assessment:d.assessment,conflicts:d.conflicts};});return {enabled:true,hasSession:data.hasSession,now:new Date(clock()).toISOString(),limits:store.limits,orders};};
+ const detail=(token,input)=>decorate(store.detail(token,parse(idSchema,input).id,clock()));
+ function create(token,input){const p=parse(createSchema,input),{reference,links,...terms}=p;terms.createdAt=new Date(terms.createdAt).toISOString();terms.dueAt=new Date(terms.dueAt).toISOString();const result=store.create(token,{reference,terms,links},clock());return {data:detail(result.sessionToken,{id:result.id}),sessionToken:result.sessionToken};}
+ function link(token,input){const p=parse(linkSchema,input);store.link(token,p,clock());return detail(token,{id:p.id});}
+ function archive(token,input){const p=parse(archiveSchema,input);store.archive(token,p,clock());return detail(token,{id:p.id});}
+ async function check(token,input){
+  const p=parse(checkSchema,input);if(running>=maxConcurrent)throw new QueryError('PAYMENT_BUSY','正在核验其他订单，请稍后再试',503);
+  const job=store.beginCheck(token,p,clock());running++;
+  try{
+   const t=job.terms,l=job.links,at=new Date(clock()).toISOString();let result=null,provider={queryStatus:l.depositAddress?'unknown':'not_requested',status:null},failure=null;
+   if(l.txHash){try{result=(await service.run({task:'payment_investigate',input:{...t,txHash:l.txHash,senderAccountId:l.senderAccountId,merchantStatus:l.merchantStatus,...(l.depositAddress?{depositAddress:l.depositAddress,...(l.depositMemo?{depositMemo:l.depositMemo}:{})}:{})}})).data;provider={queryStatus:result.queries.provider.status,status:result.diagnosis.providerStatus??null,source:result.queries.provider.source,fetchedAt:result.queries.provider.fetchedAt};}catch(e){failure={code:e instanceof QueryError?e.code:'PAYMENT_QUERY_FAILED',message:e instanceof QueryError?e.message:'本轮核验未完成，无法判断到账情况。'};}}
+   else if(l.depositAddress){try{const r=await service.call('intents_get_status',{depositAddress:l.depositAddress,...(l.depositMemo?{depositMemo:l.depositMemo}:{})});provider={queryStatus:r.ok?'verified':'unknown',status:r.ok?r.raw?.status:null,source:r.source,fetchedAt:r.fetchedAt};}catch(e){failure={code:e instanceof QueryError?e.code:'PAYMENT_QUERY_FAILED',message:'渠道查询未完成，未据此判断支付或退款。'};}}
+   const facts=result?.diagnosis?.facts,verified=facts?.verified===true,received=verified?decimal(facts.receivedAtomic,ASSETS[t.asset].decimals):null;
+   let state=!l.txHash?'needs_transaction':failure||result?.queries?.chain?.status==='unknown'?'query_unknown':'near_unconfirmed';
+   if(verified){const delta=BigInt(facts.receivedAtomic)-BigInt(atomic(t.expectedAmount,ASSETS[t.asset].decimals));state=result.diagnosis.code==='provider_conflict'?'evidence_conflict':delta<0n?'underpaid':delta>0n?'overpaid':l.merchantStatus==='paid'?'near_matched':l.merchantStatus==='unknown'?'ledger_unknown':'ledger_gap';}
+   if(!verified&&provider.status==='REFUNDED')state='refund_unverified';
+   const gaps=[];if(!l.txHash)gaps.push('尚未关联NEAR交易哈希与签名账户。');else if(!verified)gaps.push('没有取得本次目标资产向收款账户的完整FINAL事件证据。');if(l.merchantStatus==='unknown')gaps.push('商家记账状态由用户提供，目前未知；没有连接商家数据库。');if(l.depositAddress)gaps.push('1Click地址与本订单的归属由用户声明，尚未核验原始报价。');if(l.sourceChain!=='near'||l.depositAddress)gaps.push('尚未独立核验来源链入金、来源链退款与完整跨链结算。');
+   const report={at,revision:job.revision,state,terms:t,links:l,near:{verified,received,difference:verified?decimal(BigInt(facts.receivedAtomic)-BigInt(atomic(t.expectedAmount,ASSETS[t.asset].decimals)),ASSETS[t.asset].decimals):null,receivedAtomic:verified?facts.receivedAtomic:null,queryStatus:result?.queries?.chain?.status||(l.txHash?'unknown':'not_linked'),source:result?.queries?.chain?.source,fetchedAt:result?.queries?.chain?.fetchedAt,events:verified?facts.events:[],issues:facts?.issues||[]},provider,diagnosis:result?.diagnosis||null,queries:result?.queries||null,failure,gaps,scope:'订单与地址归属是用户声明。仅核对关联的一笔NEAR交易及可选1Click渠道报告；没有核验来源链，也没有执行支付或退款。重复检查仅覆盖当前浏览器会话中保留的订单，不能证明全网唯一。'};
+   const keys=verified&&BigInt(facts.receivedAtomic)>0n?facts.receiptKeys:[];
+   let committed;
+   try{committed=store.finishCheck(job,report,keys,clock());}catch(e){if(e.code!=='PAYMENT_REPORT_SIZE')throw e;committed=store.finishCheck(job,{at,revision:job.revision,state:'query_unknown',terms:t,links:l,near:{verified:false,received:null,queryStatus:'unknown',events:[]},provider:{queryStatus:'unknown',status:null},failure:{code:e.code,message:e.message},gaps:['核验结果超过当前存储范围，未确认本轮到账。请使用单次核验工具补查。'],scope:report.scope},[],clock());}
+   if(!committed)throw new QueryError('PAYMENT_CONFLICT','核验期间订单关联发生变化，本轮结果未覆盖当前订单，请重新核验',409);
+   return detail(token,{id:job.id});
+  }finally{running--;}
+ }
+ return {status,detail,create,link,archive,check,close:()=>store.close()};
+}
