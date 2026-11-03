@@ -1,4 +1,4 @@
-# FlowTrace NEAR Agent Toolkit · v0.5.0
+# FlowTrace NEAR Agent Toolkit · v0.5.1
 
 给人和Agent提供NEAR业务查询和规则预检。包含网页自然语言对话、手动操作、8个MCP工具、4个固定任务流程和一个配套Skill。手动、MCP和任务API直接查询，无需模型密钥；网页AI对话由服务端OpenAI Agents SDK调用同一套确定性服务。所有入口均不需要钱包私钥，也不签名或广播。
 

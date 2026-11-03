@@ -129,11 +129,11 @@ WATCH_DB_PATH=./runtime/watch.sqlite npm start
 
 ## 🛠️ 已经能用，接着往前做
 
-当前是 **v0.5.0 MVP**。网页对话、手动检查、8 个 MCP 工具、4 条任务流程已实现；v0.5.0 通过 **96 项测试**，真实主网、MCP 客户端和模型工具调用另行核验。
+当前是 **v0.5.1 MVP**。网页对话、手动检查、8 个 MCP 工具、4 条任务流程已实现；v0.5.1 通过 **97 项测试**，真实主网、MCP 客户端和模型工具调用另行核验。
 
 已加入**服务器观察列表、周期采集和站内事件**。下一步继续扩展历史流水与商家订单系统对接；这些扩展尚未实现。
 
-[执行计划 →](docs/PLAN.md) · [v0.5.0 更新 →](docs/RELEASE-v0.5.0.md) · [提个想法或 Bug →](https://github.com/yinbowen-dc/FlowTrace/issues) · [参与贡献 →](CONTRIBUTING.md) · [主网核验记录 →](examples/account-changes-verification.json) · [离线支付证据 →](examples/README.md)
+[执行计划 →](docs/PLAN.md) · [v0.5.1 更新 →](docs/RELEASE-v0.5.1.md) · [提个想法或 Bug →](https://github.com/yinbowen-dc/FlowTrace/issues) · [参与贡献 →](CONTRIBUTING.md) · [主网核验记录 →](examples/account-changes-verification.json) · [离线支付证据 →](examples/README.md)
 
 <details>
 <summary>使用前了解一下：数据、范围与限制</summary>

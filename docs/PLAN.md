@@ -45,3 +45,10 @@ This pass improves the product presentation and demo journey. It does not add cu
 - Passed 96 tests locally and on Node 22; checked desktop and 390px phone layouts. Deployed v0.5.0 with a dedicated persistent volume, 31 matching runtime files and the previous container retained for rollback.
 - Public health, the eight MCP tools and real mainnet watch baselines were checked separately. See [v0.5.0 release notes](RELEASE-v0.5.0.md).
 - X publication and contest submission remain deferred by the owner.
+
+## 5. Live acceptance and chat continuation — complete
+
+- Checked ten online interface cases and actual browser account-query/tool evidence.
+- Found and reproduced a second-turn chat serialization error, fixed the assistant-history conversion and added a real-SDK regression test.
+- Passed 97 tests locally and on Node 22, then deployed v0.5.1 while preserving both watches and all existing events.
+- Verified a live continued conversation returning the blocked result for unchanged 0.01 / 0.001 wNEAR parameters. See [v0.5.1](RELEASE-v0.5.1.md).

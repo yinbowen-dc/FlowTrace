@@ -129,11 +129,11 @@ Open the [local console](http://127.0.0.1:8804/agent/). Manual forms, MCP and RE
 
 ## 🛠️ Working today. More to build.
 
-This is **v0.5.0 MVP**: web chat, manual checks, 8 MCP tools and 4 workflows are implemented. The v0.5.0 release passed **96 tests**; mainnet, MCP-client and real model-tool checks were performed separately.
+This is **v0.5.1 MVP**: web chat, manual checks, 8 MCP tools and 4 workflows are implemented. The v0.5.1 release passed **97 tests**; mainnet, MCP-client and real model-tool checks were performed separately.
 
 Server-side watchlists, periodic snapshots and in-app events are now available. Transaction-history indexing and merchant order integration are next; those extensions are not implemented.
 
-[Plan →](docs/PLAN.md) · [v0.5.0 release →](docs/RELEASE-v0.5.0.md) · [Ideas and bugs →](https://github.com/yinbowen-dc/FlowTrace/issues) · [Contribute →](CONTRIBUTING.md) · [Mainnet verification →](examples/account-changes-verification.json) · [Offline payment evidence →](examples/README.md)
+[Plan →](docs/PLAN.md) · [v0.5.1 release →](docs/RELEASE-v0.5.1.md) · [Ideas and bugs →](https://github.com/yinbowen-dc/FlowTrace/issues) · [Contribute →](CONTRIBUTING.md) · [Mainnet verification →](examples/account-changes-verification.json) · [Offline payment evidence →](examples/README.md)
 
 <details>
 <summary>Before you use it: data, scope and limits</summary>

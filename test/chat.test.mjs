@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {RunContext} from '@openai/agents';
+import {Agent,Runner,RunContext,OpenAIResponsesModel} from '@openai/agents';
 import {validateChat,requireExplicitTransfer,buildChatTools,createChatService} from '../agent/chat.mjs';
 import {createServer} from '../server.mjs';
 import {fitHistory,formatReply} from '../public/agent/chat-ui.js';
@@ -14,6 +14,15 @@ test('tool call limits and missing transfer details never invoke additional back
 test('model-less mode is explicit and status never discloses credentials',async()=>{const chat=createChatService({apiKey:''});assert.equal(chat.status().available,false);assert.equal(chat.status().signing,false);await assert.rejects(()=>chat.respond({messages:[{role:'user',content:'查余额'}]}),e=>e.code==='MODEL_NOT_CONFIGURED');});
 test('chat runner has bounded turns, requests nonstored responses and preserves tool evidence',async()=>{const runner={run:async(agent,history,options)=>{assert.equal(options.maxTurns,4);assert.ok(options.signal instanceof AbortSignal);assert.equal(agent.modelSettings.store,false);await agent.tools.find(x=>x.name==='network_status').invoke(new RunContext(),'{}');return {finalOutput:'主网查询完成'};}};const chat=createChatService({runner,service:{call:async()=>({network:'mainnet',height:200,source:'fixture'})},agentFactory:x=>x});const out=await chat.respond({messages:[{role:'user',content:'查询主网状态'}]});assert.equal(out.readOnly,true);assert.equal(out.tools[0].result.height,200);assert.equal(out.tools[0].status,'completed');});
 test('model failures report their class without provider secret-bearing error text',async()=>{const chat=createChatService({runner:{run:async()=>{throw Object.assign(Error('do not expose secret diagnostic'),{status:401});}},agentFactory:x=>x});await assert.rejects(()=>chat.respond({messages:[{role:'user',content:'你好'}]}),e=>e.code==='MODEL_ACCESS'&&!e.message.includes('secret'));});
+test('multi-turn chat passes assistant history through the real SDK Responses serializer',async()=>{
+ const requests=[],history=[{role:'user',content:'查询 wrap.near'},{role:'assistant',content:'上一轮查到了公开账户。'},{role:'user',content:'继续解释这次结果。'}],original=structuredClone(history);
+ const model=new OpenAIResponsesModel({responses:{create:async request=>{requests.push(request);return {id:'resp_history_fixture',object:'response',created_at:1,status:'completed',model:'fixture',output:[{id:'msg_history_fixture',type:'message',role:'assistant',status:'completed',content:[{type:'output_text',text:'已保留上轮上下文。',annotations:[]}]}],usage:{input_tokens:5,output_tokens:3,total_tokens:8}};}}},'fixture');
+ const chat=createChatService({apiKey:'',runner:new Runner({tracingDisabled:true}),agentFactory:options=>new Agent({...options,model})});
+ const result=await chat.respond({messages:history});
+ assert.equal(result.answer,'已保留上轮上下文。');assert.equal(requests.length,1);assert.equal(requests[0].store,false);
+ const assistant=requests[0].input.find(x=>x.role==='assistant');assert.equal(assistant.status,'completed');assert.equal(assistant.content[0].type,'output_text');assert.equal(assistant.content[0].text,history[1].content);
+ assert.equal(requests[0].input.at(-1).content,history[2].content);assert.deepEqual(history,original);
+});
 test('chat history remains within the request cap without mutating original messages',()=>{const original=Array.from({length:10},(_,i)=>({role:i%2?'assistant':'user',content:'测试'.repeat(700)}));const packed=fitHistory(original);assert.ok(new TextEncoder().encode(JSON.stringify({messages:packed})).length<=7500);assert.equal(original.length,10);});
 test('chat formatting escapes model HTML while rendering simple tables and inline facts',()=>{const html=formatReply('**账户** `alice.near` <img src=x onerror=alert(1)>\n|资产|余额|\n|---|---:|\n|USDC|1.01|');assert.ok(!html.includes('<img'));assert.ok(html.includes('&lt;img'));assert.ok(html.includes('<strong>账户</strong>'));assert.ok(html.includes('<td>1.01</td>'));});
 async function running(t,options={}){let calls=0;const chatService={status:()=>({available:true,model:'fixture',signing:false}),respond:async()=>{calls++;return {answer:'fixture',tools:[],readOnly:true};}};const s=createServer({basePath:'',adapters:{},chatService,...options});await new Promise(r=>s.listen(0,'127.0.0.1',r));t.after(()=>new Promise(r=>s.close(r)));return {url:'http://127.0.0.1:'+s.address().port,calls:()=>calls};}
