@@ -26,7 +26,7 @@ npm ci
 npm start
 ```
 
-Open **http://127.0.0.1:8804/agent/**.
+Open the [local console](http://127.0.0.1:8804/agent/).
 
 Manual forms, MCP and task APIs work without an AI key. Optional chat uses the server-side `OPENAI_API_KEY` configuration. See the [configuration guide](../public/agent/guide.md) for model settings, limits and data handling.
 

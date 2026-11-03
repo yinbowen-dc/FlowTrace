@@ -125,7 +125,7 @@ npm ci
 WATCH_DB_PATH=./runtime/watch.sqlite npm start
 ```
 
-打开 **http://127.0.0.1:8804/agent/**。手动、MCP 和 REST 不需要模型密钥；AI 对话需服务端配置，见[接入指南](docs/INTEGRATION.md)。
+打开 [本机控制台](http://127.0.0.1:8804/agent/)。手动、MCP 和 REST 不需要模型密钥；AI 对话需服务端配置，见[接入指南](docs/INTEGRATION.md)。
 
 ## 🛠️ 已经能用，接着往前做
 

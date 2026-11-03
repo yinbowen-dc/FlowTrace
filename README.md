@@ -125,7 +125,7 @@ npm ci
 WATCH_DB_PATH=./runtime/watch.sqlite npm start
 ```
 
-Open **http://127.0.0.1:8804/agent/**. Manual forms, MCP and REST need no model key. AI chat uses server-side configuration; see the [integration guide](docs/INTEGRATION.md).
+Open the [local console](http://127.0.0.1:8804/agent/). Manual forms, MCP and REST need no model key. AI chat uses server-side configuration; see the [integration guide](docs/INTEGRATION.md).
 
 ## 🛠️ Working today. More to build.
 
