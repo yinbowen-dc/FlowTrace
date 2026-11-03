@@ -1,4 +1,5 @@
-import {mountChat} from './chat-ui.js?v=4.1';
+import {mountChat} from './chat-ui.js?v=4.2';
+import {resolveDemo, demoLink, demoKeyForTask} from './demo-routes.js?v=4.2';
 const $=s=>document.querySelector(s),esc=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const api=new URL('../api/agent/',location.href),mcp=new URL('../mcp',location.href).href;
 $('#mcp-url').value=mcp;
@@ -10,7 +11,7 @@ const definitions={
 };
 let current='account_inspect',lastReport=null;
 function select(task){current=task;lastReport=null;const d=definitions[task];$('#task-title').textContent=d.title;$('#task-description').textContent=d.description;$('#example-note').textContent=d.note;$('#task-panel').setAttribute('aria-labelledby','tab-'+task);document.querySelectorAll('[data-task]').forEach(b=>{b.classList.toggle('active',b.dataset.task===task);b.setAttribute('aria-selected',String(b.dataset.task===task));});$('#fields').innerHTML=d.fields.map(([name,label,placeholder,optional])=>`<label>${esc(label)}${placeholder==='select'?`<select name="${name}"><option>USDC</option><option>USDT</option><option>wNEAR</option></select>`:placeholder==='blocks'?`<input name="${name}" type="number" min="1" max="5000" step="1" value="100" required inputmode="numeric">`:placeholder==='merchant'?`<select name="${name}"><option value="unknown">未知</option><option value="unpaid">未记账</option><option value="paid">已记账</option><option value="refunded">已退款</option></select>`:`<input name="${name}" placeholder="${esc(placeholder)}" ${optional?'':'required'} maxlength="256" autocomplete="off">`}</label>`).join('');$('#run').textContent=task==='account_compare'?'查询两个区块并核对 ↗':task==='transfer_preflight'?'读取主网并预检 ↗':task==='payment_investigate'?'重新查询并排查 ↗':'读取主网并检查 ↗';$('#status').className='status';$('#status').textContent='输入公开标识即可使用，无需钱包或私钥。';$('#result').innerHTML='<div class="empty"><span>⌘</span><h3>等一个明确的任务</h3><p>结果会包含数据来源、区块锚点、检查项与执行记录。</p></div>';$('#download').disabled=true;}
-document.querySelectorAll('[data-task]').forEach(b=>b.addEventListener('click',()=>select(b.dataset.task)));
+document.querySelectorAll('[data-task]').forEach(b=>b.addEventListener('click',()=>{select(b.dataset.task);document.querySelectorAll('[data-demo]').forEach(item=>item.classList.remove('selected-demo'));const url=new URL(location.href);url.searchParams.delete('demo');history.replaceState({},'',url);$('#copy-demo-link').textContent='复制公开示例链接 ↗';}));
 $('#fill-example').addEventListener('click',()=>{const sample={...definitions[current].sample};if(current==='payment_investigate'){sample.createdAt='2026-11-03T05:50:25.074Z';sample.dueAt='2026-11-03T06:00:25.074Z';}for(const [k,v]of Object.entries(sample))$('#task-form').elements[k].value=v;$('#status').textContent='已填入公开示例；点击查询才会读取主网。';});
 const badge=(s,label)=>`<span class="badge ${['block','blocked'].includes(s)?'red':['unknown','incomplete','partial','changes_found'].includes(s)?'amber':''}">${esc(label??s)}</span>`;
 function render(report){const d=report.data;let html='';if(report.task==='account_inspect'){html=`<div class="report-heading"><h3>${esc(d.accountId)}</h3>${badge(d.quality,d.quality==='partial'?'部分查询未完成':'范围内查询完整')}</div><div class="balance-grid">${[d.native,...d.tokens].map(x=>`<div class="balance"><small>${esc(x.symbol)}</small><strong>${x.status==='verified'?esc(x.amount):'未知'}</strong><small>${esc(x.error?.message||'区块快照')}</small></div>`).join('')}</div><p class="report-note">final #${esc(d.anchor.height)} · ${esc(d.anchor.blockTime)}<br>采集：${esc(d.anchor.fetchedAt)}</p><p class="report-note">${esc(d.scope)}</p><h3>账户公钥权限</h3>${d.permissions.status==='verified'?`<p class="report-note">${d.permissions.report.keys.length} 个公钥 · ${d.permissions.report.fullAccessCount} 个 FullAccess。FunctionCall allowance 仅为Gas预算。</p><details><summary>展开权限明细</summary><pre>${esc(JSON.stringify(d.permissions.report.keys,null,2))}</pre></details><p class="report-note">${esc(d.permissions.report.scope)}</p>`:`${badge('unknown','权限未知')}<p class="report-note">${esc(d.permissions.error?.message)}</p>`}`;}
@@ -20,9 +21,35 @@ else{html=`<div class="report-heading"><h3>${esc(d.stateLabel)}</h3>${badge(d.di
 html+=`<details open><summary>执行记录 · 固定工作流</summary><ul class="trace">${report.trace.map(t=>`<li>✓ ${esc(t.step)} · ${esc(t.durationMs)} ms</li>`).join('')}</ul></details><details><summary>完整结果与来源 JSON</summary><pre>${esc(JSON.stringify(report,null,2))}</pre></details>`;$('#result').innerHTML=html;}
 $('#task-form').addEventListener('submit',async e=>{e.preventDefault();const task=current,input=Object.fromEntries([...new FormData(e.target)].filter(([,v])=>v!==''));if(task==='account_compare')input.lookbackBlocks=Number(input.lookbackBlocks);$('#run').disabled=true;$('#fill-example').disabled=true;document.querySelectorAll('[data-task]').forEach(b=>b.disabled=true);$('#status').className='status';$('#status').textContent='正在查询固定主网RPC，请稍候；上游失败会明确显示。';lastReport=null;$('#download').disabled=true;try{const response=await fetch(new URL('run',api),{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({task,input}),signal:AbortSignal.timeout(65000)}),body=await response.json();if(!response.ok||!body.ok)throw Error(body.error?.message||`HTTP ${response.status}`);lastReport=body.data;render(lastReport);$('#download').disabled=false;$('#status').textContent='任务已完成 · '+new Date(lastReport.completedAt).toLocaleString('zh-CN');}catch(e){$('#status').className='status error';$('#status').textContent=e.name==='TimeoutError'?'本轮查询超时，请重试。无法据此推断余额或付款状态。':e.message;$('#result').innerHTML='<div class="empty"><h3>本轮查询未完成</h3><p>输入或上游问题不代表链上没有资产、没有付款。</p></div>';}finally{$('#run').disabled=false;$('#fill-example').disabled=false;document.querySelectorAll('[data-task]').forEach(b=>b.disabled=false);}});
 $('#download').addEventListener('click',()=>{if(!lastReport)return;const u=URL.createObjectURL(new Blob([JSON.stringify(lastReport,null,2)],{type:'application/json'})),a=document.createElement('a');a.href=u;a.download='near-'+lastReport.task+'-'+Date.now()+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(u),1000);});
-$('#copy-mcp').addEventListener('click',async()=>{try{await navigator.clipboard.writeText(JSON.stringify({mcpServers:{'flowtrace-near':{url:mcp}}},null,2));$('#copy-mcp').textContent='已复制配置 ✓';}catch{$('#copy-mcp').textContent='请手动复制上方MCP地址';}});
-select(location.hash==='#changes'?'account_compare':current);
-document.querySelector('a[href="#changes"]').addEventListener('click',()=>{if(!$('#run').disabled)select('account_compare');});
+$('#copy-mcp').addEventListener('click',async()=>{try{await navigator.clipboard.writeText(JSON.stringify({mcpServers:{flowtrace:{url:mcp}}},null,2));$('#copy-mcp').textContent='已复制配置 ✓';}catch{$('#copy-mcp').textContent='请手动复制上方MCP地址';}});
+function activateDemo(key, {navigate = false, scroll = true} = {}) {
+  const link = demoLink(location.href, key), demo = link && resolveDemo(link);
+  if (!demo || !openManual(demo.task, demo.overrides, true)) return false;
+  document.querySelectorAll('[data-demo]').forEach(item => item.classList.toggle('selected-demo', item.dataset.demo === key));
+  $('#status').textContent = '已填入「' + demo.label + '」公开示例。点击查询后才读取主网。';
+  $('#copy-demo-link').textContent = '复制公开示例链接 ↗';
+  if (navigate) history.pushState({}, '', link);
+  if (scroll) requestAnimationFrame(() => document.querySelector('.task-tabs').scrollIntoView({block: 'start'}));
+  return true;
+}
+function applyLocation() {
+  const demo = resolveDemo(location.href);
+  if (demo) activateDemo(demo.key);
+  else { document.querySelectorAll('[data-demo]').forEach(item => item.classList.remove('selected-demo')); select(location.hash === '#changes' ? 'account_compare' : 'account_inspect'); }
+}
+document.querySelectorAll('a[data-demo]').forEach(link => link.addEventListener('click', event => {
+  if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+  event.preventDefault();
+  activateDemo(link.dataset.demo, {navigate: true});
+}));
+$('#copy-demo-link').addEventListener('click', async () => {
+  const link = demoLink(location.href, demoKeyForTask(current));
+  if (!link) return;
+  try { await navigator.clipboard.writeText(link); $('#copy-demo-link').textContent = '已复制公开示例链接 ✓'; }
+  catch { $('#copy-demo-link').textContent = '请使用页面顶部的示例入口分享'; }
+});
+window.addEventListener('popstate', applyLocation);
+applyLocation();
 function openManual(task,input={},example=false){if($('#run').disabled){$('#status').textContent='手动查询正在进行，完成后再切换。';return false;}select(task);const values=example?{...definitions[task].sample,...input}:input;if(example&&task==='payment_investigate'){values.createdAt='2026-11-03T05:50:25.074Z';values.dueAt='2026-11-03T06:00:25.074Z';}for(const [key,value]of Object.entries(values))if($('#task-form').elements[key])$('#task-form').elements[key].value=value;return true;}
 function showReport(report){const d=report.data,input=report.task==='account_inspect'?{accountId:d.accountId}:report.task==='payment_investigate'?d.order:d.input;if(!openManual(report.task,input))return;lastReport=report;render(report);$('#download').disabled=false;$('#status').textContent='对话查询快照 · '+new Date(report.completedAt).toLocaleString('zh-CN')+'；点击查询可重新读取主网。';}
 mountChat({api,openManual,showReport});

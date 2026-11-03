@@ -11,7 +11,7 @@ import {createChatService,validateChat} from './agent/chat.mjs';
 import {VERSION} from './version.mjs';
 export {VERSION};
 const root=fileURLToPath(new URL('./public/',import.meta.url));
-const mime={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.svg':'image/svg+xml','.csv':'text/csv; charset=utf-8','.json':'application/json; charset=utf-8','.md':'text/markdown; charset=utf-8','.yaml':'text/plain; charset=utf-8'};
+const mime={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.svg':'image/svg+xml','.png':'image/png','.csv':'text/csv; charset=utf-8','.json':'application/json; charset=utf-8','.md':'text/markdown; charset=utf-8','.yaml':'text/plain; charset=utf-8'};
 export function createServer({adapters=createAdapters(),basePath=process.env.BASE_PATH||'',limit=60,allowedHosts=(process.env.ALLOWED_HOSTS||'localhost,127.0.0.1,[::1],www.darkchunk.win').split(','),chatService,chatDailyLimit=Math.max(1,Number.parseInt(process.env.CHAT_DAILY_LIMIT)||40)}={}){
   const buckets=new Map(),chatBuckets=new Map();let concurrent=0,chatActive=false,chatDay='',chatCount=0;
   const service=createAgentService({adapters}),mcp=createMcpHandler(()=>createMcpServer({service}),{legacy:'stateless',responseMode:'json',maxRequestBodySize:8192,maxSubscriptions:0});

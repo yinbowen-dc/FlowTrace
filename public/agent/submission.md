@@ -18,7 +18,7 @@ v0.4新增账户变化核对：比较两个final高度的余额净差额、公�
 
 ## 提交前补齐
 
-- 公开代码仓库：https://github.com/yinbowen-dc/flowtrace-near 。项目以 MIT 许可证发布；比赛尚未提交。
+- 公开代码仓库：https://github.com/yinbowen-dc/FlowTrace 。项目以 MIT 许可证发布；比赛尚未提交。
 - X演示帖子URL：说明项目为NEAR HACKATHON构建，按官网要求标记@NEARProtocol、#NEARHackathon，并附演示视频或截图。
 - 项目名称、20–2000字符介绍、团队负责人、邮箱、团队人数、NEAR收奖账户等，按官方表单填写。
 - 演示可使用公开账户和历史转账，但需要标明没有这些账户的控制权、不是真实商家订单。

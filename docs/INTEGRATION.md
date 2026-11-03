@@ -4,6 +4,17 @@
 
 Use the same four workflows from a local server, MCP client or REST application. All examples below are read-only; transfer preflight returns an unsigned template.
 
+## Share a ready-to-fill demo
+
+| Example | Link |
+| --- | --- |
+| Account | [Open](https://www.darkchunk.win/collect/agent/?demo=account#manual) |
+| Changes | [Open](https://www.darkchunk.win/collect/agent/?demo=changes#manual) |
+| Amount limit | [Open](https://www.darkchunk.win/collect/agent/?demo=limit#manual) |
+| Historical receipt | [Open](https://www.darkchunk.win/collect/agent/?demo=receipt#manual) |
+
+Links only fill fixed public inputs. The user must click Query to read mainnet data. Copying an example link never includes edited account or order fields. Additional URL fields cannot override the preset.
+
 ## Quick start
 
 Requires **Node.js 22+** and npm.

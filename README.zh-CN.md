@@ -18,11 +18,11 @@
 
 给一个账户，FlowTrace 把**余额净变化、权限变化、代码哈希变化**放进同一份报告。起点、终点区块一起给你，点开就能继续核对。
 
-[![真实主网账户变化查询步骤回放](docs/assets/account-changes-demo.gif)](https://www.darkchunk.win/collect/agent/#changes)
+[![真实主网账户变化查询步骤回放](docs/assets/account-changes-demo.gif)](https://www.darkchunk.win/collect/agent/?demo=changes#manual)
 
 <sub>2026-11-03 真实主网演示，等待时间已压缩。两个快照展示净变化，不是完整交易流水。</sub>
 
-**[拿 wrap.near 试一把 →](https://www.darkchunk.win/collect/agent/#changes)**
+**[拿 wrap.near 试一把 →](https://www.darkchunk.win/collect/agent/?demo=changes#manual)**
 
 ## 🗣️ 一句话，让 Agent 去查
 
@@ -48,13 +48,13 @@
 
 FlowTrace 会检查 **FT 余额、收款账户、代币存储注册、费用缓冲和本次金额上限**。下面这个公开示例，实际触发了“预检阻止”：
 
-[![转出0.01 wNEAR、本次上限0.001 wNEAR的真实预检阻止结果](docs/assets/transfer-preflight.png)](https://www.darkchunk.win/collect/agent/#manual)
+[![转出0.01 wNEAR、本次上限0.001 wNEAR的真实预检阻止结果](docs/assets/transfer-preflight.png)](https://www.darkchunk.win/collect/agent/?demo=limit#manual)
 
 <sub>只读规则检查；截图中的金额上限只约束本次预检输入，不是链上授权或实际支出限额。</sub>
 
 检查完成后，可生成供钱包复核的**未签名模板**。资金和签名留在你的钱包。
 
-**[打开手动操作 → 点击「演示金额上限检查」](https://www.darkchunk.win/collect/agent/#manual)**
+**[打开金额超限示例 →](https://www.darkchunk.win/collect/agent/?demo=limit#manual)**
 
 ## 💸 “这笔收款，和约好的金额对得上吗？”
 
@@ -62,7 +62,7 @@ FlowTrace 会检查 **FT 余额、收款账户、代币存储注册、费用缓�
 
 适合支付排查、商户对账原型，以及需要读取收款证据的 Agent。订单关联由你声明；渠道成功和商家到账分开核对。
 
-**[试试历史收款示例 →](https://www.darkchunk.win/collect/agent/#manual)**
+**[试试历史收款示例 →](https://www.darkchunk.win/collect/agent/?demo=receipt#manual)**
 
 ## 🧩 给你自己的 Agent 也接上
 
@@ -100,7 +100,7 @@ FlowTrace 会检查 **FT 余额、收款账户、代币存储注册、费用缓�
 
 ## 🚀 现在就玩一遍
 
-1. 打开[在线演示](https://www.darkchunk.win/collect/agent/#changes)，无需连接钱包。
+1. 打开[在线演示](https://www.darkchunk.win/collect/agent/?demo=changes#manual)，无需连接钱包。
 2. 点击 **填入公开示例 → 查询两个区块并核对**。
 3. 看变化、看区块，下载你的第一份 JSON 报告。
 
@@ -117,11 +117,11 @@ npm start
 
 ## 🛠️ 已经能用，接着往前做
 
-当前是 **v0.4 MVP**。网页对话、手动检查、8 个 MCP 工具、4 条任务流程已实现；v0.4 基线通过 **76 项测试**，真实主网、MCP 客户端和模型工具调用另行核验。
+当前是 **v0.4.1 MVP**。网页对话、手动检查、8 个 MCP 工具、4 条任务流程已实现；v0.4.1 通过 **81 项测试**，真实主网、MCP 客户端和模型工具调用另行核验。
 
 接下来想加：**观察列表 → 定时采集 → 变化提醒**，以及历史流水与商家订单系统对接。**这些还没上线**，欢迎来一起做。
 
-[提个想法或 Bug →](https://github.com/yinbowen-dc/FlowTrace/issues) · [参与贡献 →](CONTRIBUTING.md) · [主网核验记录 →](examples/account-changes-verification.json) · [离线支付证据 →](examples/README.md)
+[执行计划 →](docs/PLAN.md) · [v0.4.1 更新 →](docs/RELEASE-v0.4.1.md) · [提个想法或 Bug →](https://github.com/yinbowen-dc/FlowTrace/issues) · [参与贡献 →](CONTRIBUTING.md) · [主网核验记录 →](examples/account-changes-verification.json) · [离线支付证据 →](examples/README.md)
 
 <details>
 <summary>使用前了解一下：数据、范围与限制</summary>

@@ -9,3 +9,14 @@ test('rejects arbitrary proxy parameters and bodies',async t=>{const {url,calls}
 test('does not interpret upstream failure as merchant not paid',async t=>{const {url}=await running(t);const response=await fetch(url+'/api/near-receipt',{method:'POST',headers:{'content-type':'application/json'},body:'{}'});assert.equal(response.status,502);assert.equal((await response.json()).error.code,'UPSTREAM_DOWN');});
 test('limits queries and rejects cross-origin writes and URL query fields',async t=>{const {url}=await running(t,{limit:2});const body={method:'POST',headers:{'content-type':'application/json'},body:'{}'};assert.equal((await fetch(url+'/api/provider-status',{...body,headers:{...body.headers,origin:'https://evil.example'}})).status,403);assert.equal((await fetch(url+'/api/network?tx=x')).status,400);assert.equal((await fetch(url+'/api/network')).status,200);assert.equal((await fetch(url+'/api/network')).status,200);assert.equal((await fetch(url+'/api/network')).status,429);});
 test('static files expose no source, credentials or path traversal',async t=>{const {url}=await running(t);for(const path of ['/.git/config','/server.mjs','/%2e%2e%2fserver.mjs','/../package.json','/lib/../.env'])assert.equal((await fetch(url+path)).status,404,path);const page=await fetch(url+'/');assert.match(page.headers.get('content-security-policy'),/script-src 'self'/);assert.equal(page.headers.get('referrer-policy'),'no-referrer');});
+test('prefixed demo links serve the console and same-origin artwork',async t=>{
+  const {url,calls}=await running(t,{basePath:'/collect'});
+  const page=await fetch(url+'/collect/agent/?demo=limit');
+  assert.equal(page.status,200);
+  assert.match(await page.text(),/复制公开示例链接/);
+  const artwork=await fetch(url+'/collect/agent/assets/flowtrace-hero.png');
+  assert.equal(artwork.status,200);
+  assert.equal(artwork.headers.get('content-type'),'image/png');
+  assert.deepEqual([...new Uint8Array(await artwork.arrayBuffer()).slice(0,8)],[137,80,78,71,13,10,26,10]);
+  assert.equal(calls.length,0);
+});

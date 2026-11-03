@@ -18,11 +18,11 @@ Did the balance move? Was a key added? Did the contract code change?
 
 Give FlowTrace an account ID. Get **net balance changes, access-key changes and code-hash differences** in one report, with both finalized block anchors ready for review.
 
-[![Real mainnet account-comparison walkthrough](docs/assets/account-changes-demo.gif)](https://www.darkchunk.win/collect/agent/#changes)
+[![Real mainnet account-comparison walkthrough](docs/assets/account-changes-demo.gif)](https://www.darkchunk.win/collect/agent/?demo=changes#manual)
 
 <sub>Real mainnet capture, November 3, 2026. Waiting time is compressed. Two snapshots show net differences, not a full transaction history.</sub>
 
-**[Try it with wrap.near →](https://www.darkchunk.win/collect/agent/#changes)**
+**[Try it with wrap.near →](https://www.darkchunk.win/collect/agent/?demo=changes#manual)**
 
 ## 🗣️ Ask a question. Let the agent check.
 
@@ -48,13 +48,13 @@ Flag the mismatch before wallet review.
 
 FlowTrace checks **FT balances, recipient existence, token storage, fee reserves and a per-request amount limit**. This public example actually returns a blocked preflight:
 
-[![Real blocked preflight: 0.01 wNEAR requested against a 0.001 wNEAR request limit](docs/assets/transfer-preflight.png)](https://www.darkchunk.win/collect/agent/#manual)
+[![Real blocked preflight: 0.01 wNEAR requested against a 0.001 wNEAR request limit](docs/assets/transfer-preflight.png)](https://www.darkchunk.win/collect/agent/?demo=limit#manual)
 
 <sub>A read-only rules check. The amount limit applies to this preflight input; it is not an on-chain authorization or spending cap.</sub>
 
 Checks can produce an **unsigned template** for wallet review. Funds and signing stay with your wallet.
 
-**[Open manual mode → choose 演示金额上限检查](https://www.darkchunk.win/collect/agent/#manual)**
+**[Open the amount-limit example →](https://www.darkchunk.win/collect/agent/?demo=limit#manual)**
 
 ## 💸 “Does this receipt match what we agreed?”
 
@@ -62,7 +62,7 @@ Provide the expected amount, asset, recipient and target transaction. FlowTrace 
 
 Useful for payment troubleshooting, merchant-reconciliation prototypes and agents that need payment evidence. Order association is declared by the caller; channel status and merchant receipt are checked separately.
 
-**[Try the historical payment example →](https://www.darkchunk.win/collect/agent/#manual)**
+**[Try the historical payment example →](https://www.darkchunk.win/collect/agent/?demo=receipt#manual)**
 
 ## 🧩 Give your own agent the tools
 
@@ -100,7 +100,7 @@ The same checks work in the browser and in clients that support HTTP MCP:
 
 ## 🚀 Take it for a spin
 
-1. Open the [live demo](https://www.darkchunk.win/collect/agent/#changes). No wallet connection needed.
+1. Open the [live demo](https://www.darkchunk.win/collect/agent/?demo=changes#manual). No wallet connection needed.
 2. Click **填入公开示例** (Fill public example), then **查询两个区块并核对** (Compare).
 3. Review the changes and blocks. Download your first JSON report.
 
@@ -117,11 +117,11 @@ Open **http://127.0.0.1:8804/agent/**. Manual forms, MCP and REST need no model 
 
 ## 🛠️ Working today. More to build.
 
-This is **v0.4 MVP**: web chat, manual checks, 8 MCP tools and 4 workflows are implemented. The baseline passed **76 tests**; mainnet, MCP-client and real model-tool checks were performed separately.
+This is **v0.4.1 MVP**: web chat, manual checks, 8 MCP tools and 4 workflows are implemented. The v0.4.1 release passed **81 tests**; mainnet, MCP-client and real model-tool checks were performed separately.
 
 Up next: **watchlists → scheduled collection → change notifications**, plus transaction-history indexing and merchant order integration. **These features are not live yet.** Come help build them.
 
-[Ideas and bugs →](https://github.com/yinbowen-dc/FlowTrace/issues) · [Contribute →](CONTRIBUTING.md) · [Mainnet verification →](examples/account-changes-verification.json) · [Offline payment evidence →](examples/README.md)
+[Plan →](docs/PLAN.md) · [v0.4.1 release →](docs/RELEASE-v0.4.1.md) · [Ideas and bugs →](https://github.com/yinbowen-dc/FlowTrace/issues) · [Contribute →](CONTRIBUTING.md) · [Mainnet verification →](examples/account-changes-verification.json) · [Offline payment evidence →](examples/README.md)
 
 <details>
 <summary>Before you use it: data, scope and limits</summary>

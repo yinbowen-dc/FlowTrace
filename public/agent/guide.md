@@ -1,8 +1,17 @@
-# FlowTrace NEAR Agent Services · v0.4
+# FlowTrace NEAR Agent Toolkit · v0.4.1
 
 给人和Agent提供NEAR业务查询和规则预检。包含网页自然语言对话、手动操作、8个MCP工具、4个固定任务流程和一个配套Skill。手动、MCP和任务API直接查询，无需模型密钥；网页AI对话由服务端OpenAI Agents SDK调用同一套确定性服务。所有入口均不需要钱包私钥，也不签名或广播。
 
 网页试用：https://www.darkchunk.win/collect/agent/
+
+## 直接打开公开演示
+
+- 账户检查：https://www.darkchunk.win/collect/agent/?demo=account#manual
+- 变化核对：https://www.darkchunk.win/collect/agent/?demo=changes#manual
+- 金额超限：https://www.darkchunk.win/collect/agent/?demo=limit#manual
+- 历史收款：https://www.darkchunk.win/collect/agent/?demo=receipt#manual
+
+打开链接只选择任务、填入固定公开样本，不自动查询或调用模型；点击查询按钮后才读取主网。页面里的“复制公开示例链接”不包含你编辑的账户或订单字段。示例中的账户不由本项目控制。未知、重复的 demo 参数不选择预设，也不能覆盖样本账户、金额或上限。旧 #changes 链接继续可用。
 
 ## 网页对话与手动操作
 
@@ -14,7 +23,7 @@
 
 GET `api/agent/chat/status`返回配置状态和使用限制；POST `api/agent/chat`接收`{messages:[{role:"user",content:"查询wrap.near的余额"}]}`。只接受user/assistant文本消息，不接受system、tool或自定义工具定义。8KB请求体限制同样适用。返回答复和真实工具调用记录；不包含OpenAI凭据。
 
-“比赛提交”区提供官方入口、核验日期、截止时间、准备清单及可复制的项目介绍草稿。详见[提交准备](./submission.md)。公开源码：https://github.com/yinbowen-dc/flowtrace-near 。X 演示帖与比赛报名尚未提交。
+“比赛提交”区提供官方入口、核验日期、截止时间、准备清单及可复制的项目介绍草稿。详见[提交准备](./submission.md)。公开源码：https://github.com/yinbowen-dc/FlowTrace 。X 演示帖与比赛报名尚未提交。
 
 ## MCP 接入
 
