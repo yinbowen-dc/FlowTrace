@@ -1,0 +1,52 @@
+{
+  "version": "0.4.0",
+  "type": "historical_public_observation",
+  "accountId": "wrap.near",
+  "notice": "Historical public account observations, not current balances, merchant orders, complete transaction history or a security audit.",
+  "tests": {
+    "node": "25.9.0",
+    "passed": 76,
+    "failed": 0
+  },
+  "mainnet": {
+    "startedAt": "2026-11-03T10:44:32.776Z",
+    "completedAt": "2026-11-03T10:44:33.469Z",
+    "baseline": {
+      "network": "mainnet",
+      "height": 222859128,
+      "hash": "AThrgekCVDT4rvuKBpQuidTzrkdCC6HeU553UYQBv39G",
+      "source": "https://free.rpc.fastnear.com",
+      "blockTime": "2026-11-03T10:43:33.302Z",
+      "fetchedAt": "2026-11-03T10:44:33.274Z"
+    },
+    "current": {
+      "network": "mainnet",
+      "source": "https://free.rpc.fastnear.com",
+      "fetchedAt": "2026-11-03T10:44:33.206Z",
+      "height": 222859228,
+      "hash": "7YqFNWZzsP9sFsjbAFhs2KkpRwdCQc6rgNFpPfmzMnuL",
+      "blockTime": "2026-11-03T10:44:30.447Z"
+    },
+    "quality": "complete_within_scope",
+    "state": "changes_found",
+    "findings": [
+      {
+        "kind": "balance_change",
+        "detail": "NEAR 净变化 -3.251427622493466816152735；不代表一笔转账，也不自动归因手续费。",
+        "symbol": "NEAR",
+        "deltaAtomic": "-3251427622493466816152735"
+      }
+    ]
+  },
+  "mcp": {
+    "tool": "near_account_changes",
+    "quality": "complete_within_scope",
+    "currentHeight": 222859880
+  },
+  "chat": {
+    "model": "gpt-5.6-terra",
+    "tool": "compare_account",
+    "task": "account_compare",
+    "completedAt": "2026-11-03T10:50:50.367Z"
+  }
+}

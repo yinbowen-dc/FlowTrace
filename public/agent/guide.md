@@ -1,6 +1,6 @@
-# FlowTrace NEAR Agent Services · v0.3
+# FlowTrace NEAR Agent Services · v0.4
 
-给人和Agent提供NEAR业务查询和规则预检。包含网页自然语言对话、手动操作、7个MCP工具、3个固定任务流程和一个配套Skill。手动、MCP和任务API直接查询，无需模型密钥；网页AI对话由服务端OpenAI Agents SDK调用同一套确定性服务。所有入口均不需要钱包私钥，也不签名或广播。
+给人和Agent提供NEAR业务查询和规则预检。包含网页自然语言对话、手动操作、8个MCP工具、4个固定任务流程和一个配套Skill。手动、MCP和任务API直接查询，无需模型密钥；网页AI对话由服务端OpenAI Agents SDK调用同一套确定性服务。所有入口均不需要钱包私钥，也不签名或广播。
 
 网页试用：https://www.darkchunk.win/collect/agent/
 
@@ -49,12 +49,13 @@ npm run agent:demo -- --stdio --account wrap.near
 npm run agent:demo -- --url https://www.darkchunk.win/collect/mcp
 ```
 
-## 七个工具
+## 八个工具
 
 | 工具 | 用途与输入 |
 |---|---|
 | near_network_status | `{}`，同步主网及final区块，最多15秒缓存 |
 | near_account_overview | `{accountId}`，NEAR和三个FT余额，固定final锚点 |
+| near_account_changes | `{accountId,lookbackBlocks?}`，默认100、范围1–5000的整数，比较两final区块的余额、公钥权限与代码哈希 |
 | near_account_permissions | `{accountId}`，直接访问公钥及权限解释 |
 | near_verify_receipt | `{txHash,senderAccountId,recipient,asset}`，单交易FT标准事件净变化 |
 | intents_get_status | `{depositAddress,depositMemo?}`，1Click渠道报告 |
@@ -64,12 +65,13 @@ npm run agent:demo -- --url https://www.darkchunk.win/collect/mcp
 `asset`只能是`USDC`、`USDT`、`wNEAR`。金额使用十进制**字符串**，精度分别为6、6、24，内部使用BigInt。不能指定自定义RPC或任意合约。完整JSON Schema：
 https://www.darkchunk.win/collect/api/agent/catalog
 
-## 三个任务接口
+## 四个任务接口
 
 `POST https://www.darkchunk.win/collect/api/agent/run`，Content-Type为`application/json`。返回`{ok,requestId,data}`，data含任务名、开始结束时间、步骤耗时、核验结果和建议。不是后台常驻Agent，不自动重复运行。
 
 | task | input | 结果 |
 |---|---|---|
+| account_compare | `{accountId,lookbackBlocks?}` | 两final高度及实际时间间隔、精确余额净差额、公钥和合约代码变化；未知保留 |
 | account_inspect | `{accountId}` | 一个final区块下的余额与公钥权限，某资产失败保留unknown |
 | payment_investigate | 下方字段 | 收款差异、各证据查询状态、单交易核验范围 |
 | transfer_preflight | `{accountId,recipient,asset,amount,maxAmount?}` | blocked / incomplete / ready_for_wallet_review，检查项及可选钱包模板 |
@@ -109,3 +111,13 @@ curl https://www.darkchunk.win/collect/api/agent/run \
 - https://github.com/near/NEPs/blob/master/neps/nep-0145.md
 - https://modelcontextprotocol.io/specification/latest/basic/transports
 - https://docs.near-intents.org/integration/devkit/skills
+
+## v0.4 账户变化核对
+
+网页入口：https://www.darkchunk.win/collect/agent/#changes 。也可对话“核对 wrap.near 最近100个区块的余额和权限变化”。REST使用account_compare，MCP使用near_account_changes。lookbackBlocks必须是JSON整数，默认100，范围1–5000；这是高度差，不是分钟数。实际起止区块时间及间隔随结果返回。
+
+服务先锚定最新final区块，再按高度读取历史区块；两边的余额和公钥列表分别锚定到各自区块哈希，不接收客户端伪造的快照。金额和净差使用最小单位字符串与BigInt。报告区分新增/移除公钥、权限变动和代码哈希变化，未把Gas allowance当成代币预算。
+
+未知余额、无法识别的权限、重复公钥或区块响应不匹配，不能输出“没有变化”。历史区块不可用则本轮查询失败，不回退为零。净额为零仍可能发生多笔相互抵消的转账，新增公钥也可能是正常换钥；此报告不是被盗判定或安全审计。服务按需查询，无后台采集、主动通知或完整流水索引。
+
+区块查询参数参考：https://docs.near.org/api/rpc/block-chunk

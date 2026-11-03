@@ -3,7 +3,7 @@ export function mountChat({api,openManual,showReport}){
   const $=s=>document.querySelector(s),log=$('#chat-log');let messages=[],busy=false,available=null;
   $('#chat-send').disabled=true;$('#chat-status').textContent='正在连接对话服务，读取完成后即可发送。';
   function bubble(role,text){const node=document.createElement('article');node.className='chat-message '+role;const label=document.createElement('small');label.textContent=role==='user'?'你':'FlowTrace';const body=document.createElement('div');body.className='chat-message-text';if(role==='assistant')body.innerHTML=formatReply(text);else body.textContent=text;node.append(label,body);log.append(node);log.scrollTop=log.scrollHeight;return node;}
-  function welcome(){bubble('assistant','你可以让我查账户、排查收款，或准备一个转账预检。\n例如：帮我查询 wrap.near 的余额和权限。\n需要具体参数时我会追问；这里不会执行资金操作。');}
+  function welcome(){bubble('assistant','你可以让我查账户、核对近期变化、排查收款，或准备一个转账预检。\n例如：帮我查询 wrap.near 的余额和权限。\n需要具体参数时我会追问；这里不会执行资金操作。');}
   welcome();
   $('#chat-reset').addEventListener('click',()=>{if(busy)return;messages=[];log.replaceChildren();welcome();$('#chat-status').textContent='已清空本页对话。';});
   document.querySelectorAll('[data-prompt]').forEach(button=>button.addEventListener('click',()=>{$('#chat-input').value=button.dataset.prompt;$('#chat-input').focus();}));

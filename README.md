@@ -15,15 +15,18 @@ An agent can return a confident explanation while the underlying balance query f
 | Workflow | Result |
 | --- | --- |
 | Inspect an account | Native NEAR and USDC/USDT/wNEAR balances plus direct access-key permissions, queried at one final block. Failed queries remain unknown. |
+| Compare account snapshots | Read two finalized heights and report exact balance deltas, added/removed/changed access keys, and contract-code changes. Unknown data stays unknown. |
 | Investigate a payment | Compare a declared order against the net standard FT events in one finalized NEAR transaction, with optional NEAR Intents 1Click status. |
 | Preflight an FT transfer | Check balances, receiver existence and token registration, native storage/gas reserve, and an optional caller amount limit. Return checks and, where appropriate, an unsigned wallet template. |
 | Talk to the service | An OpenAI Agents SDK agent calls those workflows. The UI exposes actual tool results and can transfer a report into the manual panel. |
-| Integrate another agent | Seven tools over standard Streamable HTTP MCP or local stdio, three task APIs, and a downloadable Skill. |
+| Integrate another agent | Eight tools over standard Streamable HTTP MCP or local stdio, four task APIs, and a downloadable Skill. |
 | Recheck evidence | Download JSON and replay the payment rules locally with the included CLI. |
 
 NEAR provides the account model, access-key permissions, final block anchors, FT events, token storage rules, and transaction data used by these checks. 1Click is an optional channel-status source; it is not independent proof of merchant receipt.
 
 ## Try it in three minutes
+
+New in v0.4: open [account changes](https://www.darkchunk.win/collect/agent/#changes), fill the public example and run a comparison over 100 block heights. Reports show the actual interval in seconds. This is an on-demand net snapshot comparison, not complete transaction history, continuous monitoring, or a security verdict.
 
 1. Open the [agent console](https://www.darkchunk.win/collect/agent/). Ask: `查询 wrap.near 的余额和公钥权限`. Expand the tool results and inspect the final block, sources, and balances.
 2. Send the result to the manual panel or run the same account query directly there. Download its JSON report.
@@ -63,7 +66,7 @@ Local stdio:
 {"mcpServers":{"flowtrace-near":{"command":"node","args":["/absolute/path/to/flowtrace/mcp/stdio.mjs"]}}}
 ```
 
-Tool names: `near_network_status`, `near_account_overview`, `near_account_permissions`, `near_verify_receipt`, `intents_get_status`, `near_investigate_payment`, and `near_transfer_preflight`.
+Tool names: `near_network_status`, `near_account_overview`, `near_account_permissions`, `near_account_changes`, `near_verify_receipt`, `intents_get_status`, `near_investigate_payment`, and `near_transfer_preflight`.
 
 ```sh
 # With the local server running in another terminal:
@@ -73,13 +76,13 @@ npm run agent:demo
 npm run agent:demo -- --stdio --account wrap.near
 ```
 
-`GET /api/agent/catalog` describes all inputs. `POST /api/agent/run` accepts `{task,input}` for `account_inspect`, `payment_investigate`, or `transfer_preflight`. See the [integration guide](public/agent/guide.md) for limits and exact fields. Monetary inputs are decimal strings and use exact atomic units internally.
+`GET /api/agent/catalog` describes all inputs. `POST /api/agent/run` accepts `{task,input}` for `account_inspect`, `account_compare`, `payment_investigate`, or `transfer_preflight`. See the [integration guide](public/agent/guide.md) for limits and exact fields. Monetary inputs are decimal strings and use exact atomic units internally.
 
 ## Architecture and verification
 
 The browser and offline replay CLI share `public/lib/core.js`. `adapters.mjs` queries fixed NEAR mainnet RPC providers and optional 1Click status. `agent/service.mjs` implements deterministic workflows shared by REST and MCP. `agent/chat.mjs` connects the conversational interface to these same workflows using the official OpenAI Agents SDK. No model-generated code is executed.
 
-The automated suite covers event-netting and receipt finality, order association, amount precision, upstream failures, task validation, transfer limits, chat tool grounding, and HTTP/stdio MCP. Tests use controlled fixtures. Live RPC and browser checks were performed separately during development; an old observation is not a current balance or a guarantee of upstream availability.
+The automated suite covers event-netting and receipt finality, order association, amount precision, upstream failures, task validation, transfer limits, chat tool grounding, and HTTP/stdio MCP. The v0.4 suite passes 76 tests. Tests use controlled fixtures. Live RPC, standard MCP-client, real model-tool and browser checks were performed separately during development ([historical observations](examples/account-changes-verification.json)); an old observation is not a current balance or a guarantee of upstream availability.
 
 ## Boundaries and data handling
 

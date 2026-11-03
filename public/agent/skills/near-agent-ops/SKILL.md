@@ -1,15 +1,16 @@
 ---
 name: near-agent-ops
-description: Inspect NEAR mainnet account balances and access keys, investigate an FT payment or NEAR Intents 1Click status, and prepare an unsigned FT transfer with FlowTrace MCP tools or task APIs. Use when an agent needs sourced NEAR operational facts, payment discrepancy analysis, or transfer preflight. Does not sign or execute transactions.
+description: Inspect and compare NEAR mainnet account balances and access keys, investigate an FT payment or NEAR Intents 1Click status, and prepare an unsigned FT transfer with FlowTrace MCP tools or task APIs. Use when an agent needs sourced NEAR operational facts, payment discrepancy analysis, or transfer preflight. Does not sign or execute transactions.
 ---
 
 # NEAR agent operations
 
-Use the configured FlowTrace MCP server. Discover its seven tools with `tools/list`; do not invent a tool that is unavailable. For the exact schemas and supported task recipes, read `https://www.darkchunk.win/collect/api/agent/catalog`. If the hosted endpoint is unavailable, use the local stdio server from the project; see `https://www.darkchunk.win/collect/agent/guide.md`.
+Use the configured FlowTrace MCP server. Discover its available tools with `tools/list`; do not invent a tool that is unavailable. For the exact schemas and supported task recipes, read `https://www.darkchunk.win/collect/api/agent/catalog`. If the hosted endpoint is unavailable, use the local stdio server from the project; see `https://www.darkchunk.win/collect/agent/guide.md`.
 
 ## Choose a workflow
 
 - **Account inspection:** call `near_account_overview` and `near_account_permissions`. For one consistent block across both reports, prefer the HTTP `account_inspect` task. Native NEAR and only USDC, USDT and wNEAR are supported; don't describe this as a complete portfolio.
+- **Account changes:** call `near_account_changes` with `accountId` and optional integer `lookbackBlocks` (1–5000, default 100), or use task `account_compare`. This is a difference in block heights, not a wall-clock duration. Cite both block anchors and actual time interval. Two snapshots show net differences, not every transaction; zero net movement does not establish inactivity or safety. Missing historical state stays unknown. Key/code changes require context, not an automatic theft verdict. The service does not monitor continuously or send alerts.
 - **Receipt verification:** call `near_verify_receipt` with NEAR transaction hash, signer, recipient and one supported FT asset. Use the actual transaction signer; it may differ from the payer. Explain the net event amount, finality, source and any missing evidence. One transaction does not establish invoice ownership or current balance.
 - **Payment investigation:** call `near_investigate_payment` with a single order claim and its target NEAR transaction. Include the original 1Click deposit address and memo when available. Never guess a memo or claim source-chain refund confirmation. The service does not check all merchant orders for reused receipts.
 - **Transfer preflight:** call `near_transfer_preflight` with the actual sender, receiver, asset and decimal-string amount. Include `maxAmount` only as a caller-supplied check on this input. Report every blocking or unknown check. A `ready_for_wallet_review` result is an unsigned template for review, not transaction success, authorization or simulation.
