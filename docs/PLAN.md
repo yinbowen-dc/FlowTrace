@@ -18,13 +18,13 @@ Make the public journey work from the README to a useful mainnet check, then pre
 - Check malformed routes, unknown presets, history navigation and the absence of request-parameter overrides.
 - Verified all four examples in the browser, plus desktop and 390px phone layouts. Back/forward restored the selected example; copying a link omitted edited fields.
 
-## 3. Publish and prepare submission — deployed; X post pending
+## 3. Publish and prepare materials — complete
 
 - Deployed v0.4.1 to the existing server. Runtime environment, isolation and loopback routing were preserved; the prior container is retained for rollback.
 - Public health reports v0.4.1. Demo routing and mainnet results were checked; public MCP exposes the existing eight tools.
 - Update repository links, product name, developer instructions and the private application draft.
 - Prepared current screenshots, a 13-second MP4 step replay and an X-post draft. The owner still needs to publish the public post.
-- Obtain the owner's X profile/post and review the final official form before submission. Do not publish a social post or mark submission complete without the required human authorization and evidence.
+- Submission materials are prepared. X publication and official submission are deferred for now; they are not part of the remaining work for this release.
 
 ## Release boundary
 
@@ -35,4 +35,4 @@ This pass improves the product presentation and demo journey. It does not add cu
 - 81 tests passed locally on Node.js 25.9.0 and on the server with Node.js 22.23.4.
 - 28 deployed runtime files match the verified release source byte for byte.
 - [v0.4.1 release notes](RELEASE-v0.4.1.md) include the four shareable demo links and scope.
-- Official application is not submitted: the required public X demo post is missing, and final form review/consent remains with the owner.
+- Official application is not submitted. X publication and final form review are deferred; the private draft and prepared media are retained for later.

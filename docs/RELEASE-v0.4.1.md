@@ -29,4 +29,4 @@ Opening these links selects and fills a fixed example. It does not query mainnet
 - A staging container verified the inherited application environment before production switch. The 28 deployed runtime files matched the verified release source.
 - Public health and the standard Streamable HTTP MCP client were checked separately. The original eight tools and four task workflows remain available.
 
-This release does not introduce background monitoring, alerts, custody, signing or broadcasting. Tests use deterministic fixtures; live observations are separate historical checks. Hackathon submission is still pending the owner's public X demo post and final form review.
+This release does not introduce background monitoring, alerts, custody, signing or broadcasting. Tests use deterministic fixtures; live observations are separate historical checks. Hackathon submission is deferred for now; the prepared draft and media are retained.

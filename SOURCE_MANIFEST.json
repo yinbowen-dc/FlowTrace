@@ -1,9 +1,9 @@
 {
   "project": "FlowTrace",
   "version": "0.4.1",
-  "baseCommit": "1bacaf61e2b6fbd076d45dad50dd7f0f32dba496",
+  "baseCommit": "6ca611efbbf36e4ae8f905a2661f8de818d22aa7",
   "status": "public-release",
-  "createdAt": "2026-11-03T12:29:34.646101+00:00",
+  "createdAt": "2026-11-03T12:32:38.985885+00:00",
   "files": {
     ".dockerignore": "d386dbe099526d98f2d11f8ec849235eb2d3c243fad373f96a3291ffbdd0614a",
     ".gitignore": "c60d81133483611917495efed590d1467314f1eb648c320dd7f1ed0757987ba7",
@@ -18,8 +18,8 @@
     "agent/schemas.mjs": "7d8e99394a34a711a855522ae982cacc55b71e3cb50d0671cd6ee58ef62dca5a",
     "agent/service.mjs": "ce5a4d1ed8fa3a8172da2ad457baff0254a7fb1baaa065acd6ec0e8ce8db324f",
     "docs/INTEGRATION.md": "0a50270cfab91ddc75106bff478b60de933f1213de7d7cd15f62f7f3ca507eb9",
-    "docs/PLAN.md": "b09d155211e4b3654c7a5fb8e0b44b8bae7c3bdef3eaaf2681666c8425e1d646",
-    "docs/RELEASE-v0.4.1.md": "e85e4c81cd7c4d583cc36fa5ff7bbd11ee1f7bf83f0e17753b53bac78764c7f5",
+    "docs/PLAN.md": "0ef23ca50b4b7b33ed102e425fc835128a8d65981acca6f8dac78eb6d93f47e8",
+    "docs/RELEASE-v0.4.1.md": "ee2c0d63122cbb4283e55622f20202f5084379b87015cd86d9b25aca07b36b08",
     "docs/assets/README.md": "4aa3aaf9cc20fa6fb81a4a04a2a92674e0e96ab78f9678059be5f2d8b3692b8c",
     "docs/assets/account-changes-demo.gif": "82140a248fdce08652fe05b6f34bc154ad971ff8a3c2f27b2f7168faa226f0ea",
     "docs/assets/account-changes.png": "8de126b964c37cd03852ea97740f4a8eae3e51c4076c24344aa80d1e00a4a2d4",
