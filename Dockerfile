@@ -7,6 +7,7 @@ COPY agent ./agent
 COPY mcp ./mcp
 COPY watch ./watch
 COPY payments ./payments
+COPY wallet ./wallet
 COPY public ./public
 USER node
 ENV HOST=0.0.0.0 PORT=8796 BASE_PATH=/collect

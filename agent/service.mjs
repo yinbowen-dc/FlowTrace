@@ -34,6 +34,7 @@ export function createAgentService({adapters=createAdapters(),clock=()=>new Date
     return {asOf,order,diagnosis,stateLabel:diagnosis.label,queries:{chain:{status:chain.status,error:chain.error,source:chain.value?.source,fetchedAt:chain.value?.fetchedAt},provider:{status:provider.status,error:provider.error,source:provider.value?.source,fetchedAt:provider.value?.fetchedAt}},scope:'只核对本次提供的一笔订单和一笔交易；未跨订单查重，未核验来源链退款；查询失败不能推断未付款。'};
   }
   async function preflight(input,a,deadline){
+    if(input.asset==='NEAR')return nativePreflight(input,a,deadline);
     let amount,max;try{amount=atomic(input.amount,ASSETS[input.asset].decimals);max=input.maxAmount===undefined?null:atomic(input.maxAmount,ASSETS[input.asset].decimals);if(BigInt(amount)<=0n)throw Error('转账金额必须大于0');}catch(e){throw new QueryError('INVALID_INPUT',e.message,400);}
     const checks=[];const check=(id,status,detail)=>checks.push({id,status,detail});
     if(max!==null)check('caller_limit',BigInt(amount)<=BigInt(max)?'pass':'block','调用方本次金额限制；不构成授权，也不累计历史支出。');
@@ -57,6 +58,23 @@ export function createAgentService({adapters=createAdapters(),clock=()=>new Date
     const state=checks.some(x=>x.status==='block')?'blocked':checks.some(x=>x.status==='unknown')?'incomplete':'ready_for_wallet_review';
     const walletRequest=state==='ready_for_wallet_review'?{signerId:input.accountId,receiverId:asset.contract,actions:[{type:'FunctionCall',params:{methodName:'ft_transfer',args:{receiver_id:input.recipient,amount},gas:'30000000000000',deposit:'1'}}]}:null;
     return {state,anchor:a,input,amountAtomic:amount,checks,balances:{tokenAtomic:amountAvailable,nativeAvailableAtomic:nativeAvailable?.toString()??null},sources:[...new Set([sender,balance,receiver,storage,config].map(x=>x.source).filter(Boolean))],walletRequest,expiresAt:new Date(Date.parse(a.fetchedAt)+60000).toISOString(),requiresWalletApproval:true,broadcast:false,simulation:false,scope:'规则预检，不执行合约、不确定实际Gas、未核验所选签名公钥及合约全部运行条件。模板不含nonce或签名；钱包需重新检查余额、网络、权限与费用。maxAmount仅约束本次预检输入，不是链上授权。'};
+  }
+  async function nativePreflight(input,a,deadline){
+    let amount,max;try{amount=atomic(input.amount,24);max=input.maxAmount===undefined?null:atomic(input.maxAmount,24);if(BigInt(amount)<=0n)throw Error('转账金额必须大于0');}catch(e){throw new QueryError('INVALID_INPUT',e.message,400);}
+    const checks=[],check=(id,status,detail)=>checks.push({id,status,detail});
+    if(max!==null)check('caller_limit',BigInt(amount)<=BigInt(max)?'pass':'block','本次金额上限，不构成链上授权。');
+    if(input.accountId===input.recipient)check('distinct_accounts','block','付款与收款账户相同，请核对目的。');
+    const [sender,receiver,config]=await Promise.all([
+      capture(async()=>{const r=await query(a,{request_type:'view_account',account_id:input.accountId},deadline);return {value:r.raw,source:r.source};}),
+      capture(async()=>{const r=await query(a,{request_type:'view_account',account_id:input.recipient},deadline);return {value:r.raw,source:r.source};}),
+      capture(async()=>{const r=await adapters.rpc('EXPERIMENTAL_protocol_config',{block_id:a.hash},deadline);if(r.raw.chain_id!=='mainnet')throw new QueryError('WRONG_NETWORK','协议配置不是主网');return {value:r.raw.runtime_config?.storage_amount_per_byte,source:r.source};})
+    ]);
+    check('recipient_account',receiver.status==='verified'?'pass':'unknown',receiver.status==='verified'?'收款账户已存在。':receiver.error.message);
+    let available=null;
+    if(sender.status==='verified'&&config.status==='verified')try{const s=sender.value;if(!Number.isSafeInteger(s.storage_usage)||s.storage_usage<0)throw Error();const locked=BigInt(uint(s.locked)),stake=BigInt(s.storage_usage)*BigInt(uint(config.value)),reserve=stake>locked?stake-locked:0n;available=BigInt(uint(s.amount))-reserve;check('native_balance',available>=BigInt(amount)+nativeGasReserve?'pass':'block',`扣除存储后 ${decimal(available.toString(),24)} NEAR；需覆盖转出额及应用预留0.01 NEAR费用缓冲。缓冲不是实际费用报价。`);}catch{check('native_balance','unknown','无法可靠计算账户存储与可用余额');}
+    else check('native_balance','unknown','账户或协议参数查询未完成');
+    const state=checks.some(c=>c.status==='block')?'blocked':checks.some(c=>c.status==='unknown')?'incomplete':'ready_for_wallet_review';
+    return {state,anchor:a,input,amountAtomic:amount,checks,balances:{nativeAvailableAtomic:available?.toString()??null},walletRequest:state==='ready_for_wallet_review'?{signerId:input.accountId,receiverId:input.recipient,actions:[{type:'Transfer',params:{deposit:amount}}]}:null,expiresAt:new Date(Date.parse(a.fetchedAt)+60000).toISOString(),requiresWalletApproval:true,broadcast:false,simulation:false,scope:'原生NEAR规则预检；不创建账户，不模拟执行，不验证钱包所有权或签名权限。钱包仍需复核。'};
   }
   async function compare(input){
     const current=await anchor(),height=current.height-input.lookbackBlocks,deadline=Date.now()+30000;

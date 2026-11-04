@@ -12,6 +12,13 @@
 </p>
 <p align="center"><strong>NEAR 主网</strong> · 8 个 MCP 工具 · <a href="LICENSE">MIT 开源</a></p>
 
+> **新增 · 钱包 Agent**：查余额 → 准备转账 → Meteor 钱包确认 → FINAL 结果核验。[打开体验](https://www.darkchunk.win/collect/agent/wallet/) · [查看主流程](public/agent/wallet/guide.md)。换币与跨链执行待接入。
+
+[![钱包 Agent：对话、手动入口与已保存的转账任务](docs/assets/wallet-workspace.png)](https://www.darkchunk.win/collect/agent/wallet/)
+
+<sub>2026-11-04 正式网站实拍。公开账户预检示例，金额超限已阻止；没有转移资金。</sub>
+
+
 ## 🧾 这笔钱，走到哪一步了？
 
 保存订单，关联真实交易，再把应收、实际到账和差额放在同一处核对。核验历史会保留；同一收据被多张订单引用时，两边都会提示。渠道报告与来源链证据分开展示，未知如实保留。

@@ -12,6 +12,13 @@
 </p>
 <p align="center"><strong>NEAR mainnet</strong> · 8 MCP tools · <a href="LICENSE">MIT</a></p>
 
+> **New · Wallet Agent** — Balance → transfer preflight → Meteor wallet confirmation → FINAL verification. [Open app](https://www.darkchunk.win/collect/agent/wallet/) · [How it works](public/agent/wallet/guide.md). Swaps and cross-chain execution are planned.
+
+[![Wallet Agent with a persistent transfer task and verified amount-limit block](docs/assets/wallet-workspace.png)](https://www.darkchunk.win/collect/agent/wallet/)
+
+<sub>Production capture, November 4, 2026. Public-account preflight demonstration; no funds were moved.</sub>
+
+
 ## 🧾 Follow a payment from claim to evidence
 
 Save an order, associate a real NEAR transaction and compare the receipt with the declared amount. The workspace keeps check history and flags receipt reuse across your saved orders. Channel reports and missing source-chain evidence remain separate.

@@ -1,0 +1,15 @@
+{
+  "verifiedOn": "2026-11-04",
+  "connector": "@hot-labs/near-connect@0.12.0",
+  "executor": {
+    "url": "https://raw.githubusercontent.com/Meteor-Wallet/meteor_wallet_sdk/ef1be35fc3712f2de60a7563aed543d78e73f763/storage/meteor-near-connect-latest.js",
+    "sha256": "96210256a89cb382bb7fe95f29d6a2489319da87472fe77018b4cdcbf1672b50",
+    "loadedBy": "browser at connection time in sandboxed iframe",
+    "license": "upstream Meteor SDK GPL-3.0; not redistributed in this repository",
+    "source": "https://github.com/Meteor-Wallet/meteor_wallet_sdk/tree/ef1be35fc3712f2de60a7563aed543d78e73f763"
+  },
+  "icon": {
+    "url": "https://raw.githubusercontent.com/Meteor-Wallet/meteor_wallet_sdk/main/assets/meteor-logo-svg.svg",
+    "loadedBy": "browser at connection time"
+  }
+}

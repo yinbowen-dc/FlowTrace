@@ -13,15 +13,20 @@ import {createWatchStore} from './watch/store.mjs';
 import {createWatchService} from './watch/service.mjs';
 import {createPaymentStore} from './payments/store.mjs';
 import {createPaymentService} from './payments/service.mjs';
+import {randomBytes} from 'node:crypto';
+import {createWalletStore} from './wallet/store.mjs';
+import {createWalletService} from './wallet/service.mjs';
 export {VERSION};
 const root=fileURLToPath(new URL('./public/',import.meta.url));
-const mime={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.svg':'image/svg+xml','.png':'image/png','.csv':'text/csv; charset=utf-8','.json':'application/json; charset=utf-8','.md':'text/markdown; charset=utf-8','.yaml':'text/plain; charset=utf-8'};
+const mime={'.txt':'text/plain; charset=utf-8','.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.svg':'image/svg+xml','.png':'image/png','.csv':'text/csv; charset=utf-8','.json':'application/json; charset=utf-8','.md':'text/markdown; charset=utf-8','.yaml':'text/plain; charset=utf-8'};
 export function createServer({adapters=createAdapters(),basePath=process.env.BASE_PATH||'',limit=60,allowedHosts=(process.env.ALLOWED_HOSTS||'localhost,127.0.0.1,[::1],www.darkchunk.win').split(','),chatService,watchService,watchDbPath=process.env.WATCH_DB_PATH,paymentService,paymentDbPath=process.env.PAYMENTS_DB_PATH||(watchDbPath?resolve(dirname(watchDbPath),'payments.sqlite'):undefined),chatDailyLimit=Math.max(1,Number.parseInt(process.env.CHAT_DAILY_LIMIT)||40)}={}){
   const buckets=new Map(),chatBuckets=new Map();let concurrent=0,chatActive=false,chatDay='',chatCount=0;
   const service=createAgentService({adapters}),mcp=createMcpHandler(()=>createMcpServer({service}),{legacy:'stateless',responseMode:'json',maxRequestBodySize:8192,maxSubscriptions:0});
   const chat=chatService||createChatService({service});
   const watch=watchService||(watchDbPath?createWatchService({store:createWatchStore({path:watchDbPath}),service}):null);
   const payments=paymentService||(paymentDbPath?createPaymentService({store:createPaymentStore({path:paymentDbPath}),service}):null);
+  const wallet=watchDbPath?createWalletService({store:createWalletStore({path:resolve(dirname(watchDbPath),'wallet.sqlite')}),service,adapters}):null;
+  const walletFields={'/api/wallet/status':[],'/api/wallet/prepare':['accountId','recipient','asset','amount','maxAmount'],'/api/wallet/open':['id','revision','accountId'],'/api/wallet/result':['id','revision','attemptId','txHash'],'/api/wallet/check':['id','revision'],'/api/wallet/cancel':['id','revision']};
   const paymentFields={'/api/payments/status':[],'/api/payments/create':['reference','recipient','asset','expectedAmount','createdAt','dueAt','links'],'/api/payments/detail':['id'],'/api/payments/link':['id','revision','links'],'/api/payments/check':['id','revision'],'/api/payments/archive':['id','revision','archived']};
   const mcpRequest=toNodeHandler(mcp,{maxRequestBodySize:8192});
   const server=http.createServer(async(req,res)=>{
@@ -35,8 +40,8 @@ export function createServer({adapters=createAdapters(),basePath=process.env.BAS
       if(basePath){if(path===basePath){res.writeHead(308,{location:basePath+'/'});res.end();return;}if(!path.startsWith(basePath+'/'))throw new QueryError('NOT_FOUND','页面不存在',404);path=path.slice(basePath.length);}
       if(path==='/api/health'){if(req.method!=='GET')throw new QueryError('METHOD','仅支持GET',405);json(200,{ok:true,version:VERSION,service:'FlowTrace',time:new Date().toISOString()});return;}
       if(path.startsWith('/api/')||path==='/mcp'){
-        const isMcp=path==='/mcp',get=['/api/network','/api/public-sample','/api/agent/catalog','/api/agent/chat/status','/api/watch/status','/api/payments/status'].includes(path);
-        if(!isMcp&&!Object.hasOwn(paymentFields,path)&&!['/api/network','/api/public-sample','/api/provider-status','/api/near-receipt','/api/agent/catalog','/api/agent/run','/api/agent/chat','/api/agent/chat/status','/api/watch/status','/api/watch/add','/api/watch/action','/api/watch/events'].includes(path))throw new QueryError('NOT_FOUND','接口不存在',404);
+        const isMcp=path==='/mcp',get=['/api/network','/api/public-sample','/api/agent/catalog','/api/agent/chat/status','/api/watch/status','/api/payments/status','/api/wallet/status'].includes(path);
+        if(!isMcp&&!Object.hasOwn(paymentFields,path)&&!Object.hasOwn(walletFields,path)&&path!=='/api/wallet/chat'&&!['/api/network','/api/public-sample','/api/provider-status','/api/near-receipt','/api/agent/catalog','/api/agent/run','/api/agent/chat','/api/agent/chat/status','/api/watch/status','/api/watch/add','/api/watch/action','/api/watch/events'].includes(path))throw new QueryError('NOT_FOUND','接口不存在',404);
         if(req.method!==(get?'GET':'POST'))throw new QueryError('METHOD',get?'仅支持GET':'仅支持POST',405);
         if([...url.searchParams].length)throw new QueryError('INVALID_INPUT','请勿在URL中传递查询字段',400);
         const origin=req.headers.origin;
@@ -49,7 +54,14 @@ export function createServer({adapters=createAdapters(),basePath=process.env.BAS
         let body={};if(!get){if(!req.headers['content-type']?.startsWith('application/json'))throw new QueryError('CONTENT_TYPE','请求体需要application/json',415);
           let size=0,parts=[];for await(const chunk of req){size+=chunk.length;if(size>8192)throw new QueryError('TOO_LARGE','查询请求过大',413);parts.push(chunk);}try{body=JSON.parse(Buffer.concat(parts).toString());}catch{throw new QueryError('INVALID_JSON','查询JSON格式不正确',400);}
           if(!body||typeof body!=='object'||Array.isArray(body))throw new QueryError('INVALID_INPUT','查询字段应为对象',400);
-          const fields=paymentFields[path]||(path==='/api/watch/add'?['accountId','rules']:path==='/api/watch/action'?['id','action']:path==='/api/watch/events'?['before']:path==='/api/agent/chat'?['messages']:path==='/api/agent/run'?['task','input']:path==='/api/provider-status'?['depositAddress','depositMemo']:['txHash','senderAccountId','recipient','tokenContract']);if(Object.keys(body).some(k=>!fields.includes(k)))throw new QueryError('INVALID_INPUT','包含不支持的查询字段',400);
+          const fields=walletFields[path]||paymentFields[path]||(path==='/api/wallet/chat'?['messages','walletAccountId']:path==='/api/watch/add'?['accountId','rules']:path==='/api/watch/action'?['id','action']:path==='/api/watch/events'?['before']:path==='/api/agent/chat'?['messages']:path==='/api/agent/run'?['task','input']:path==='/api/provider-status'?['depositAddress','depositMemo']:['txHash','senderAccountId','recipient','tokenContract']);if(Object.keys(body).some(k=>!fields.includes(k)))throw new QueryError('INVALID_INPUT','包含不支持的查询字段',400);
+        }
+        const walletToken=(req.headers.cookie||'').split(';').map(x=>x.trim()).find(x=>x.startsWith('flowtrace_wallet='))?.slice('flowtrace_wallet='.length);
+        const setWalletCookie=token=>res.setHeader('Set-Cookie',`flowtrace_wallet=${token}; Path=${basePath||''}/; HttpOnly; SameSite=Strict; Max-Age=604800${['localhost','127.0.0.1','[::1]'].includes(hostname)?'':'; Secure'}`);
+        if(Object.hasOwn(walletFields,path)){
+          if(!wallet){if(path==='/api/wallet/status'){json(200,{ok:true,data:{enabled:false,tasks:[]}});return;}throw new QueryError('WALLET_DISABLED','钱包任务服务未启用',503);}
+          let data;concurrent++;try{if(path==='/api/wallet/status')data=wallet.status(walletToken);else if(path==='/api/wallet/prepare'){const r=await wallet.prepare(walletToken,body);data=r.data;setWalletCookie(r.sessionToken||walletToken);}else data=await wallet[path.split('/').at(-1)](walletToken,body);}finally{concurrent--;}
+          if(walletToken&&!res.hasHeader('Set-Cookie'))setWalletCookie(walletToken);json(200,{ok:true,requestId,data});return;
         }
         if(Object.hasOwn(paymentFields,path)){
           if(!payments){if(path==='/api/payments/status'){json(200,{ok:true,data:{enabled:false,hasSession:false,orders:[]}});return;}throw new QueryError('PAYMENT_DISABLED','支付工作台未启用',503);}
@@ -71,7 +83,7 @@ export function createServer({adapters=createAdapters(),basePath=process.env.BAS
           json(200,{ok:true,requestId,data});return;
         }
         if(path==='/api/agent/chat/status'){json(200,{ok:true,data:{...chat.status(),limits:{perIpPerMinute:2,dailyRequests:chatDailyLimit,concurrent:1},quotaScope:'进程内计数，服务重启后重置'}});return;}
-        if(path==='/api/agent/chat'){
+        if(path==='/api/agent/chat'||path==='/api/wallet/chat'){
           validateChat(body);if(!chat.status().available)throw new QueryError('MODEL_NOT_CONFIGURED','对话模型暂未启用，请使用手动操作。',503);
           const day=new Date().toISOString().slice(0,10);if(day!==chatDay){chatDay=day;chatCount=0;}
           if(chatCount>=chatDailyLimit)throw new QueryError('CHAT_DAILY_LIMIT','今日演示对话已达次数上限，仍可使用手动查询。',429);
@@ -80,7 +92,7 @@ export function createServer({adapters=createAdapters(),basePath=process.env.BAS
           if(chatActive)throw new QueryError('CHAT_BUSY','正在处理其他对话，请稍后再试或使用手动操作。',503);
           for(const k of chatBuckets.keys())if(!k.endsWith(':'+minute))chatBuckets.delete(k);
           chatBuckets.set(chatKey,(chatBuckets.get(chatKey)||0)+1);chatCount++;chatActive=true;concurrent++;
-          try{json(200,{ok:true,requestId,data:await chat.respond(body)});}finally{chatActive=false;concurrent--;}return;
+          try{let currentToken=walletToken;const context=path==='/api/wallet/chat'&&wallet?{wallet:{accountId:body.walletAccountId,status:()=>wallet.status(currentToken),prepare:async input=>{const r=await wallet.prepare(currentToken,input);currentToken=r.sessionToken||currentToken;setWalletCookie(currentToken);return r.data;}}}:{};json(200,{ok:true,requestId,data:await chat.respond(body,context)});}finally{chatActive=false;concurrent--;}return;
         }
         concurrent++;try{const data=path==='/api/agent/catalog'?service.catalog():path==='/api/agent/run'?await service.run(body):path==='/api/network'?await adapters.network():path==='/api/public-sample'?await adapters.findSample():path==='/api/provider-status'?await adapters.provider(body):await adapters.receipt(body);json(200,{ok:true,requestId,data});}finally{concurrent--;}return;
       }
@@ -88,10 +100,15 @@ export function createServer({adapters=createAdapters(),basePath=process.env.BAS
       if(path.includes('\0')||path.includes('\\'))throw new QueryError('NOT_FOUND','页面不存在',404);
       const file=resolve(root,'.'+(path.endsWith('/')?path+'index.html':path));if(!file.startsWith(root.endsWith(sep)?root:root+sep)||!mime[extname(file)])throw new QueryError('NOT_FOUND','页面不存在',404);
       let buffer;try{buffer=await readFile(file);}catch{throw new QueryError('NOT_FOUND','页面不存在',404);}
+      if(path==='/agent/wallet/'||path==='/agent/wallet/index.html'){
+        const nonce=randomBytes(18).toString('base64');
+        res.setHeader('Content-Security-Policy',`default-src 'self'; script-src 'self' 'nonce-${nonce}'; style-src 'self' 'unsafe-inline'; connect-src 'self' https://raw.githubusercontent.com https://mc.meteorwallet.app wss://mc.meteorwallet.app https://free.rpc.fastnear.com https://rpc.mainnet.near.org; img-src 'self' data: https://raw.githubusercontent.com; frame-src 'self' about:; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'`);
+        buffer=Buffer.from(buffer.toString().replace('id="wallet-bundle"','id="wallet-bundle" nonce="'+nonce+'"'));
+      }
       res.writeHead(200,{'content-type':mime[extname(file)],'cache-control':'no-cache'});res.end(req.method==='HEAD'?undefined:buffer);
     }catch(e){json(e instanceof QueryError?e.status:500,{ok:false,requestId,error:{code:e.code||'INTERNAL',message:e instanceof QueryError?e.message:'查询未完成，请稍后重试'}});}
   });
-  server.on('close',()=>{void mcp.close();void chat.close?.();void watch?.close();payments?.close();});
+  server.on('close',()=>{void mcp.close();void chat.close?.();void watch?.close();payments?.close();wallet?.close();});
   return server;
 }
 if(process.argv[1]&&resolve(process.argv[1])===fileURLToPath(import.meta.url)){
