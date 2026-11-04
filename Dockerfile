@@ -4,6 +4,7 @@ COPY package.json package-lock.json ./
 RUN npm ci --omit=dev --ignore-scripts && npm cache clean --force
 COPY server.mjs adapters.mjs version.mjs ./
 COPY agent ./agent
+COPY auth ./auth
 COPY mcp ./mcp
 COPY watch ./watch
 COPY payments ./payments

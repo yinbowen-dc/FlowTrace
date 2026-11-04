@@ -15,7 +15,8 @@ export function createWalletStore({path=':memory:',clock=()=>Date.now(),tracking
     CREATE TABLE IF NOT EXISTS wallet_conversations(owner TEXT PRIMARY KEY REFERENCES wallet_sessions(id) ON DELETE CASCADE,epoch INTEGER NOT NULL DEFAULT 1,items TEXT NOT NULL DEFAULT '[]',focus_task TEXT);
     CREATE TABLE IF NOT EXISTS wallet_turns(owner TEXT NOT NULL REFERENCES wallet_sessions(id) ON DELETE CASCADE,id TEXT NOT NULL,epoch INTEGER NOT NULL,fingerprint TEXT NOT NULL,state TEXT NOT NULL,until INTEGER NOT NULL,result TEXT,PRIMARY KEY(owner,id));
     CREATE TABLE IF NOT EXISTS wallet_task_requests(owner TEXT NOT NULL REFERENCES wallet_sessions(id) ON DELETE CASCADE,request_id TEXT NOT NULL,fingerprint TEXT NOT NULL,task TEXT NOT NULL REFERENCES wallet_tasks(id) ON DELETE CASCADE,PRIMARY KEY(owner,request_id));
-    CREATE TABLE IF NOT EXISTS wallet_access(id TEXT PRIMARY KEY,owner TEXT NOT NULL REFERENCES wallet_sessions(id) ON DELETE CASCADE,token_hash TEXT UNIQUE NOT NULL,expires INTEGER NOT NULL,revoked INTEGER NOT NULL DEFAULT 0);`);
+    CREATE TABLE IF NOT EXISTS wallet_access(id TEXT PRIMARY KEY,owner TEXT NOT NULL REFERENCES wallet_sessions(id) ON DELETE CASCADE,token_hash TEXT UNIQUE NOT NULL,expires INTEGER NOT NULL,revoked INTEGER NOT NULL DEFAULT 0);
+    CREATE TABLE IF NOT EXISTS wallet_user_links(user_id TEXT PRIMARY KEY,owner TEXT NOT NULL UNIQUE REFERENCES wallet_sessions(id) ON DELETE CASCADE);`);
   const get=(sql,...a)=>db.prepare(sql).get(...a),run=(sql,...a)=>db.prepare(sql).run(...a),all=(sql,...a)=>db.prepare(sql).all(...a),principals=new WeakMap();
   function transaction(fn){db.exec('BEGIN IMMEDIATE');try{const v=fn();db.exec('COMMIT');return v;}catch(e){db.exec('ROLLBACK');throw e;}}
   function principal(id,kind,accessId){const p={};principals.set(p,{id,kind,accessId});return p;}
@@ -24,6 +25,22 @@ export function createWalletStore({path=':memory:',clock=()=>Date.now(),tracking
     if(typeof token!=='string'||!/^[A-Za-z0-9_-]{43}$/.test(token))return null;return get('SELECT * FROM wallet_sessions WHERE token_hash=? AND expires>?',digest(token),clock());
   }
   function requireOwner(token){const o=owner(token);if(!o)throw new QueryError('WALLET_SESSION','当前任务会话或访问凭证已失效',401);if(typeof token==='string')run('UPDATE wallet_sessions SET expires=? WHERE id=?',clock()+ttl,o.id);return o;}
+  function claimableOwner(token){const o=owner(token);return o&&!get('SELECT user_id FROM wallet_user_links WHERE owner=?',o.id)?o.id:null;}
+  function account(userId,{claimOwnerId=null}={}){return transaction(()=>{
+    if(typeof userId!=='string'||!/^[0-9a-f-]{36}$/i.test(userId))throw new QueryError('AUTH_IDENTITY','登录身份无效',401);
+    let row=get('SELECT s.* FROM wallet_user_links l JOIN wallet_sessions s ON s.id=l.owner WHERE l.user_id=?',userId);
+    if(row&&row.expires<=clock()){run('DELETE FROM wallet_sessions WHERE id=?',row.id);row=null;}
+    let adopted=false;
+    if(!row){
+      row=typeof claimOwnerId==='string'?get('SELECT s.* FROM wallet_sessions s WHERE s.id=? AND s.expires>? AND NOT EXISTS(SELECT 1 FROM wallet_user_links l WHERE l.owner=s.id)',claimOwnerId,clock()):null;
+      if(row&&get("SELECT id FROM wallet_turns WHERE owner=? AND state='running' AND until>?",row.id,clock()))throw new QueryError('AUTH_GUEST_BUSY','本设备仍有对话正在处理，完成后再登录保存记录',409);
+      if(row){adopted=true;run('UPDATE wallet_sessions SET token_hash=? WHERE id=?',digest(randomBytes(32).toString('base64url')),row.id);run('UPDATE wallet_access SET revoked=1 WHERE owner=?',row.id);}
+      else{run('DELETE FROM wallet_sessions WHERE expires<=?',clock());if(get('SELECT COUNT(*) n FROM wallet_sessions').n>=100)throw new QueryError('WALLET_CAPACITY','演示会话已满，请稍后再试',503);row={id:randomUUID()};run('INSERT INTO wallet_sessions VALUES(?,?,?)',row.id,digest(randomBytes(32).toString('base64url')),clock()+ttl);}
+      run('INSERT INTO wallet_user_links VALUES(?,?)',userId,row.id);
+    }
+    run('UPDATE wallet_sessions SET expires=? WHERE id=?',clock()+ttl,row.id);
+    return {principal:principal(row.id,'account'),adopted};
+  });}
   function ensure(token){run('DELETE FROM wallet_sessions WHERE expires<=?',clock());let o=owner(token),sessionToken;if(!o){if(get('SELECT COUNT(*) n FROM wallet_sessions').n>=100)throw new QueryError('WALLET_CAPACITY','演示会话已满，请稍后重试',503);sessionToken=randomBytes(32).toString('base64url');o={id:randomUUID()};run('INSERT INTO wallet_sessions VALUES(?,?,?)',o.id,digest(sessionToken),clock()+ttl);}return {ownerId:o.id,sessionToken,token:sessionToken||token};}
   function tracking(id){const j=get('SELECT * FROM wallet_jobs WHERE task=?',id);if(!j)return null;return {enabled:!!j.enabled,state:!j.enabled?'paused':j.expires<=clock()?'expired':j.attempts>=maxChecks?'exhausted':'active',expiresAt:new Date(j.expires).toISOString(),nextCheckAt:new Date(j.next_at).toISOString(),attempts:j.attempts,maxChecks,checking:!!j.claim&&j.claim_until>clock()};}
   const unpack=r=>r?{...JSON.parse(r.body),id:r.id,revision:r.revision,createdAt:new Date(r.created).toISOString(),updatedAt:new Date(r.updated).toISOString(),tracking:tracking(r.id)}:null;
@@ -60,5 +77,5 @@ export function createWalletStore({path=':memory:',clock=()=>Date.now(),tracking
   function revokeAccess(token){const o=requireOwner(token);run('UPDATE wallet_access SET revoked=1 WHERE owner=?',o.id);return accessStatus(token);}
   // Existing pending transfers acquire a bounded lease once on migration; restarts never renew it.
   run(`INSERT OR IGNORE INTO wallet_jobs(task,enabled,expires,next_at) SELECT id,1,?,? FROM wallet_tasks WHERE json_extract(body,'$.txHash') IS NOT NULL AND json_extract(body,'$.state') IN ('submitted','unknown')`,clock()+trackingMs,clock());
-  return {list,create,read,update,claimed,ensure,focus,conversation,assertEpoch,lookupTurn,beginTurn,completeTurn,failTurn,resetConversation,checkLease,finishCheck,due,setTracking,accessStatus,createAccess,authorizeAccess,revokeAccess,close:()=>db.close()};
+  return {list,create,read,update,claimed,ensure,claimableOwner,account,focus,conversation,assertEpoch,lookupTurn,beginTurn,completeTurn,failTurn,resetConversation,checkLease,finishCheck,due,setTracking,accessStatus,createAccess,authorizeAccess,revokeAccess,close:()=>db.close()};
 }

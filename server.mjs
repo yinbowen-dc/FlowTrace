@@ -19,16 +19,21 @@ import {createWalletService} from './wallet/service.mjs';
 import {publicConversation,prepareConversation,conversationFingerprint} from './agent/conversations.mjs';
 import {createTaskMcpServer} from './mcp/tasks.mjs';
 import {openChatStream} from './agent/http-stream.mjs';
+import {createAuthStore} from './auth/store.mjs';
+import {createGoogleProvider} from './auth/google.mjs';
+import {createAuthService} from './auth/service.mjs';
 export {VERSION};
 const root=fileURLToPath(new URL('./public/',import.meta.url));
 const mime={'.txt':'text/plain; charset=utf-8','.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.svg':'image/svg+xml','.png':'image/png','.csv':'text/csv; charset=utf-8','.json':'application/json; charset=utf-8','.md':'text/markdown; charset=utf-8','.yaml':'text/plain; charset=utf-8'};
-export function createServer({adapters=createAdapters(),basePath=process.env.BASE_PATH||'',limit=60,allowedHosts=(process.env.ALLOWED_HOSTS||'localhost,127.0.0.1,[::1],www.darkchunk.win').split(','),chatService,watchService,walletOptions={},watchDbPath=process.env.WATCH_DB_PATH,paymentService,paymentDbPath=process.env.PAYMENTS_DB_PATH||(watchDbPath?resolve(dirname(watchDbPath),'payments.sqlite'):undefined),chatDailyLimit=Math.max(1,Number.parseInt(process.env.CHAT_DAILY_LIMIT)||40)}={}){
+export function createServer({adapters=createAdapters(),basePath=process.env.BASE_PATH||'',limit=60,allowedHosts=(process.env.ALLOWED_HOSTS||'localhost,127.0.0.1,[::1],www.darkchunk.win').split(','),chatService,watchService,walletOptions={},authOptions={},watchDbPath=process.env.WATCH_DB_PATH,paymentService,paymentDbPath=process.env.PAYMENTS_DB_PATH||(watchDbPath?resolve(dirname(watchDbPath),'payments.sqlite'):undefined),chatDailyLimit=Math.max(1,Number.parseInt(process.env.CHAT_DAILY_LIMIT)||40)}={}){
   const buckets=new Map(),chatBuckets=new Map();let concurrent=0,chatActive=false,chatDay='',chatCount=0;
   const service=createAgentService({adapters}),mcp=createMcpHandler(()=>createMcpServer({service}),{legacy:'stateless',responseMode:'json',maxRequestBodySize:8192,maxSubscriptions:0});
   const chat=chatService||createChatService({service});
   const watch=watchService||(watchDbPath?createWatchService({store:createWatchStore({path:watchDbPath}),service}):null);
   const payments=paymentService||(paymentDbPath?createPaymentService({store:createPaymentStore({path:paymentDbPath}),service}):null);
   const wallet=watchDbPath?createWalletService({store:createWalletStore({path:resolve(dirname(watchDbPath),'wallet.sqlite')}),service,adapters,...walletOptions}):null;
+  const auth=wallet?createAuthService({store:createAuthStore({path:resolve(dirname(watchDbPath),'auth.sqlite')}),google:authOptions.provider||createGoogleProvider({...authOptions,basePath}),walletStore:wallet.conversations}):null;
+  const authFields={'/api/auth/status':[],'/api/auth/google/start':[],'/api/auth/logout':[]};
   const walletFields={'/api/wallet/status':[],'/api/wallet/prepare':['accountId','recipient','asset','amount','maxAmount'],'/api/wallet/open':['id','revision','accountId'],'/api/wallet/result':['id','revision','attemptId','txHash'],'/api/wallet/check':['id','revision'],'/api/wallet/cancel':['id','revision'],'/api/wallet/detail':['id'],'/api/wallet/focus':['id'],'/api/wallet/tracking':['id','revision','action'],'/api/wallet/conversation':[],'/api/wallet/conversation/reset':[],'/api/wallet/access/status':[],'/api/wallet/access/create':[],'/api/wallet/access/revoke':[]};
   const paymentFields={'/api/payments/status':[],'/api/payments/create':['reference','recipient','asset','expectedAmount','createdAt','dueAt','links'],'/api/payments/detail':['id'],'/api/payments/link':['id','revision','links'],'/api/payments/check':['id','revision'],'/api/payments/archive':['id','revision','archived']};
   const mcpRequest=toNodeHandler(mcp,{maxRequestBodySize:8192});
@@ -41,10 +46,22 @@ export function createServer({adapters=createAdapters(),basePath=process.env.BAS
       let hostname;try{hostname=new URL('http://'+req.headers.host).hostname;}catch{}if(!allowedHosts.includes(hostname))throw new QueryError('HOST','请求主机未被允许',403);
       const url=new URL(req.url,'http://localhost');path=decodeURIComponent(url.pathname);
       if(basePath){if(path===basePath){res.writeHead(308,{location:basePath+'/'});res.end();return;}if(!path.startsWith(basePath+'/'))throw new QueryError('NOT_FOUND','页面不存在',404);path=path.slice(basePath.length);}
+      const readCookie=name=>(req.headers.cookie||'').split(';').map(x=>x.trim()).find(x=>x.startsWith(name+'='))?.slice(name.length+1);
+      const secureCookie=!['localhost','127.0.0.1','[::1]'].includes(hostname);
+      const authCookie=(name,value,maxAge=2592000,sameSite='Strict',cookiePath=(basePath||'')+'/')=>name+'='+value+'; Path='+cookiePath+'; HttpOnly; SameSite='+sameSite+'; Max-Age='+maxAge+(secureCookie?'; Secure':'');
+      const authToken=readCookie('flowtrace_auth');
+      if(path==='/auth/google/callback'){
+        if(req.method!=='GET')throw new QueryError('METHOD','仅支持GET',405);
+        if(!auth)throw new QueryError('AUTH_DISABLED','登录服务暂未启用',503);
+        if(concurrent>=4)throw new QueryError('BUSY','服务繁忙，请重新发起登录',503);
+        concurrent++;let outcome='failed';const cookies=[authCookie('flowtrace_oauth','',0,'Lax',(basePath||'')+'/auth/google/')];
+        try{const r=await auth.callback(url.searchParams,readCookie('flowtrace_oauth'));if(r.cancelled)outcome='cancelled';else{outcome='success';cookies.push(authCookie('flowtrace_auth',r.token));if(r.adopted)cookies.push(authCookie('flowtrace_wallet','',0));}}catch{/* No provider errors, codes or tokens are put in the redirect URL. */}finally{concurrent--;}
+        res.setHeader('Set-Cookie',cookies);res.writeHead(303,{location:(basePath||'')+'/agent/wallet/?login='+outcome,'cache-control':'no-store'});res.end();return;
+      }
       if(path==='/api/health'){if(req.method!=='GET')throw new QueryError('METHOD','仅支持GET',405);json(200,{ok:true,version:VERSION,service:'FlowTrace',time:new Date().toISOString()});return;}
       if(path.startsWith('/api/')||path==='/mcp'||path==='/mcp/tasks'){
-        const isTaskMcp=path==='/mcp/tasks',isMcp=path==='/mcp'||isTaskMcp,get=['/api/network','/api/public-sample','/api/agent/catalog','/api/agent/chat/status','/api/watch/status','/api/payments/status','/api/wallet/status','/api/wallet/conversation','/api/wallet/access/status'].includes(path);
-        if(!isMcp&&!Object.hasOwn(paymentFields,path)&&!Object.hasOwn(walletFields,path)&&path!=='/api/wallet/chat'&&!['/api/network','/api/public-sample','/api/provider-status','/api/near-receipt','/api/agent/catalog','/api/agent/run','/api/agent/chat','/api/agent/chat/status','/api/watch/status','/api/watch/add','/api/watch/action','/api/watch/events'].includes(path))throw new QueryError('NOT_FOUND','接口不存在',404);
+        const isTaskMcp=path==='/mcp/tasks',isMcp=path==='/mcp'||isTaskMcp,get=['/api/network','/api/public-sample','/api/agent/catalog','/api/agent/chat/status','/api/watch/status','/api/payments/status','/api/wallet/status','/api/wallet/conversation','/api/wallet/access/status','/api/auth/status'].includes(path);
+        if(!isMcp&&!Object.hasOwn(authFields,path)&&!Object.hasOwn(paymentFields,path)&&!Object.hasOwn(walletFields,path)&&path!=='/api/wallet/chat'&&!['/api/network','/api/public-sample','/api/provider-status','/api/near-receipt','/api/agent/catalog','/api/agent/run','/api/agent/chat','/api/agent/chat/status','/api/watch/status','/api/watch/add','/api/watch/action','/api/watch/events'].includes(path))throw new QueryError('NOT_FOUND','接口不存在',404);
         if(req.method!==(get?'GET':'POST'))throw new QueryError('METHOD',get?'仅支持GET':'仅支持POST',405);
         if([...url.searchParams].length)throw new QueryError('INVALID_INPUT','请勿在URL中传递查询字段',400);
         const origin=req.headers.origin;
@@ -57,10 +74,19 @@ export function createServer({adapters=createAdapters(),basePath=process.env.BAS
         let body={};if(!get){if(!req.headers['content-type']?.startsWith('application/json'))throw new QueryError('CONTENT_TYPE','请求体需要application/json',415);
           let size=0,parts=[];for await(const chunk of req){size+=chunk.length;if(size>8192)throw new QueryError('TOO_LARGE','查询请求过大',413);parts.push(chunk);}try{body=JSON.parse(Buffer.concat(parts).toString());}catch{throw new QueryError('INVALID_JSON','查询JSON格式不正确',400);}
           if(!body||typeof body!=='object'||Array.isArray(body))throw new QueryError('INVALID_INPUT','查询字段应为对象',400);
-          const fields=walletFields[path]||paymentFields[path]||(path==='/api/wallet/chat'?['messages','walletAccountId','requestId']:path==='/api/watch/add'?['accountId','rules']:path==='/api/watch/action'?['id','action']:path==='/api/watch/events'?['before']:path==='/api/agent/chat'?['messages']:path==='/api/agent/run'?['task','input']:path==='/api/provider-status'?['depositAddress','depositMemo']:['txHash','senderAccountId','recipient','tokenContract']);if(Object.keys(body).some(k=>!fields.includes(k)))throw new QueryError('INVALID_INPUT','包含不支持的查询字段',400);
+          const fields=walletFields[path]||paymentFields[path]||authFields[path]||(path==='/api/wallet/chat'?['messages','walletAccountId','requestId']:path==='/api/watch/add'?['accountId','rules']:path==='/api/watch/action'?['id','action']:path==='/api/watch/events'?['before']:path==='/api/agent/chat'?['messages']:path==='/api/agent/run'?['task','input']:path==='/api/provider-status'?['depositAddress','depositMemo']:['txHash','senderAccountId','recipient','tokenContract']);if(Object.keys(body).some(k=>!fields.includes(k)))throw new QueryError('INVALID_INPUT','包含不支持的查询字段',400);
         }
-        const walletToken=(req.headers.cookie||'').split(';').map(x=>x.trim()).find(x=>x.startsWith('flowtrace_wallet='))?.slice('flowtrace_wallet='.length);
-        const setWalletCookie=token=>res.setHeader('Set-Cookie',`flowtrace_wallet=${token}; Path=${basePath||''}/; HttpOnly; SameSite=Strict; Max-Age=604800${['localhost','127.0.0.1','[::1]'].includes(hostname)?'':'; Secure'}`);
+        if(Object.hasOwn(authFields,path)){
+          if(path==='/api/auth/status'){json(200,{ok:true,data:auth?auth.status(authToken):{available:false,authenticated:false,user:null}});return;}
+          const expectedOrigin=(secureCookie?'https://':'http://')+req.headers.host;
+          if(origin!==expectedOrigin)throw new QueryError('ORIGIN','请从本站发起登录操作',403);
+          if(!auth)throw new QueryError('AUTH_DISABLED','登录服务暂未启用',503);
+          if(path==='/api/auth/logout'){auth.logout(authToken);res.setHeader('Set-Cookie',authCookie('flowtrace_auth','',0));json(200,{ok:true,data:auth.status(null)});return;}
+          concurrent++;try{const r=await auth.start({sessionToken:authToken,guestToken:readCookie('flowtrace_wallet')});res.setHeader('Set-Cookie',authCookie('flowtrace_oauth',r.browserToken,600,'Lax',(basePath||'')+'/auth/google/'));json(200,{ok:true,data:{url:r.url}});}finally{concurrent--;}return;
+        }
+        const user=auth?.identity(authToken),guestToken=readCookie('flowtrace_wallet');
+        const walletToken=(Object.hasOwn(walletFields,path)||path==='/api/wallet/chat')&&user?auth.owner(user,guestToken):guestToken;
+        const setWalletCookie=token=>{if(typeof token==='string'&&!user)res.setHeader('Set-Cookie',authCookie('flowtrace_wallet',token,604800));};
         if(Object.hasOwn(walletFields,path)){
           if(!wallet){if(path==='/api/wallet/status'){json(200,{ok:true,data:{enabled:false,tasks:[]}});return;}throw new QueryError('WALLET_DISABLED','钱包任务服务未启用',503);}
           let data;concurrent++;try{if(path==='/api/wallet/status')data=wallet.status(walletToken);else if(path==='/api/wallet/conversation')data=publicConversation(wallet.conversations,walletToken);else if(path==='/api/wallet/conversation/reset'){wallet.conversations.resetConversation(walletToken);data=publicConversation(wallet.conversations,walletToken);}else if(path==='/api/wallet/access/status')data=wallet.accessStatus(walletToken);else if(path==='/api/wallet/access/create')data=wallet.createAccess(walletToken);else if(path==='/api/wallet/access/revoke')data=wallet.revokeAccess(walletToken);else if(path==='/api/wallet/prepare'){const r=await wallet.prepare(walletToken,body);data=r.data;setWalletCookie(r.sessionToken||walletToken);}else data=await wallet[path.split('/').at(-1)](walletToken,body);}finally{concurrent--;}
@@ -121,7 +147,7 @@ export function createServer({adapters=createAdapters(),basePath=process.env.BAS
       res.writeHead(200,{'content-type':mime[extname(file)],'cache-control':'no-cache'});res.end(req.method==='HEAD'?undefined:buffer);
     }catch(e){json(e instanceof QueryError?e.status:500,{ok:false,requestId,error:{code:e.code||'INTERNAL',message:e instanceof QueryError?e.message:'查询未完成，请稍后重试'}});}
   });
-  server.on('close',()=>{void mcp.close();void chat.close?.();void watch?.close();payments?.close();wallet?.close();});
+  server.on('close',()=>{void mcp.close();void chat.close?.();void watch?.close();payments?.close();auth?.close();wallet?.close();});
   return server;
 }
 if(process.argv[1]&&resolve(process.argv[1])===fileURLToPath(import.meta.url)){

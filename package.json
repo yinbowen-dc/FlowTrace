@@ -1,6 +1,6 @@
 {
   "name": "flowtrace-near",
-  "version": "0.8.2",
+  "version": "0.8.3",
   "private": true,
   "type": "module",
   "engines": {
@@ -19,6 +19,7 @@
     "@modelcontextprotocol/node": "2.1.2",
     "@modelcontextprotocol/server": "2.4.0",
     "@openai/agents": "0.21.0",
+    "google-auth-library": "11.3.3",
     "zod": "4.6.7"
   },
   "devDependencies": {

@@ -1,6 +1,8 @@
-# FlowTrace Wallet Agent · v0.8.2
+# FlowTrace Wallet Agent · v0.8.3
 
 说出目标 → Agent 整理参数 → 服务器预检并保存任务 → 用户在 Meteor 钱包决定是否签名 → 后台核验 FINAL 执行和到账证据 → 继续问“刚才那笔怎么样”。
+
+Google 登录配置完成后，可关联钱包助手的对话和任务，并在其他设备恢复；登录会话最长30天，工作区仍按7天无访问过期。登录不代替钱包签名。具体配置和当前状态见 [实现说明](https://github.com/yinbowen-dc/FlowTrace/blob/main/docs/WALLET-AGENT.md)，数据处理见 [隐私说明](privacy/)。
 
 ## 当前能力
 

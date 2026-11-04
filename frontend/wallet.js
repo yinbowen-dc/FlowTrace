@@ -113,6 +113,34 @@ $('#chat-form').addEventListener('submit',async e=>{
 });
 $('#chat-input').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey&&!e.isComposing){e.preventDefault();if(!$('#chat-send').disabled)$('#chat-form').requestSubmit();}});
 function updateFocus(){const t=tasks.find(t=>t.id===focusedTaskId);$('#conversation-focus').hidden=!t;$('#conversation-focus').textContent=t?'正在讨论 '+t.input.amount+' '+t.input.asset+' → '+t.input.recipient:'';}
+let identityState=null;
+const identityChannel=typeof BroadcastChannel==='function'?new BroadcastChannel('flowtrace-identity'):null;
+if(identityChannel)identityChannel.onmessage=()=>location.reload();
+async function loadIdentity(){
+  try{
+    identityState=await api('auth/status');const user=identityState.user;
+    $('#google-login').hidden=!!user;$('#google-login').disabled=!identityState.available;
+    $('#signed-in-user').hidden=!user;
+    if(user){$('#user-name').textContent=user.name;$('#user-email').textContent=user.email;$('#user-initial').textContent=Array.from(user.name||user.email)[0]?.toUpperCase()||'G';}
+    $('#auth-note').textContent=user?'对话与任务已关联到此账号':identityState.available?'登录后，在其他设备继续对话与任务':'登录配置中 · 访客可用';
+    $('#workspace-privacy').textContent=user?'对话和任务关联到 Google 账号，可在其他设备登录取回；最多20条任务，7天无访问后过期。':'访客记录限当前浏览器；首次 Google 登录可保存本设备的记录。最多20条任务，7天无访问后过期。';
+    const url=new URL(location.href),outcome=url.searchParams.get('login');
+    if(['success','cancelled','failed'].includes(outcome)){
+      url.searchParams.delete('login');window.history.replaceState(null,'',url);
+      if(outcome==='success'){tell('登录成功，已切换到此账号的对话与任务。');identityChannel?.postMessage({type:'identity-changed'});}
+      else tell(outcome==='cancelled'?'已取消 Google 登录，可以继续使用访客功能。':'Google 登录未完成，请重新尝试；访客记录仍保留。');
+    }
+  }catch{$('#auth-note').textContent='登录状态暂未读取，请刷新重试';$('#google-login').disabled=true;}
+}
+$('#google-login').addEventListener('click',async()=>{
+  if(chatBusy){tell('请等当前回复完成后再登录。');return;}const b=$('#google-login');b.disabled=true;
+  try{const r=await api('auth/google/start',{}),url=new URL(r.url);if(url.origin!=='https://accounts.google.com')throw Error('登录地址未通过验证');location.assign(url.href);}
+  catch(e){tell(e.message);b.disabled=!identityState?.available;}
+});
+$('#google-logout').addEventListener('click',async()=>{
+  if(chatBusy){tell('请等当前回复完成后再退出。');return;}const b=$('#google-logout');b.disabled=true;
+  try{await api('auth/logout',{});identityChannel?.postMessage({type:'identity-changed'});location.reload();}catch(e){tell(e.message);b.disabled=false;}
+});
 async function loadConversation(){
   try{const r=await api('wallet/conversation');history=r.messages||[];if(history.length){$('#chat-log').replaceChildren();for(const m of history)chatMessage(m.role,m.content,{accountView:m.accountView});}$('#conversation-status').textContent=history.length?'已恢复最近对话':'可以直接查询公开账户';}
   catch{$('#conversation-status').textContent='对话记录暂未恢复，可重试刷新';}
@@ -122,5 +150,6 @@ $('#create-access').addEventListener('click',async()=>{const b=$('#create-access
 $('#copy-access').addEventListener('click',async()=>{if(!externalConfig)return;try{await navigator.clipboard.writeText(JSON.stringify(externalConfig,null,2));$('#access-status').textContent='MCP 配置已复制，请保存在自己的私密配置文件中，不要贴到公开聊天或仓库。';}catch{tell('复制未完成，请检查浏览器剪贴板权限。');}});
 $('#revoke-access').addEventListener('click',async()=>{try{await api('wallet/access/revoke',{});externalConfig=null;$('#access-value').value='';$('#access-value-label').hidden=true;$('#copy-access').disabled=true;$('#access-status').textContent='本会话全部外部访问令牌已撤销。';}catch(e){tell(e.message);}});
 api('wallet/access/status').then(r=>{if(r.active)$('#access-status').textContent='当前有 '+r.active+' 个有效令牌，权限仅限本会话任务读取与核验。';}).catch(()=>{});
+await loadIdentity();
 await loadConversation();
 await refresh();api('agent/chat/status').then(r=>{$('#model-status').textContent=r.available?'Agent 已就绪':'可使用直接操作';$('#model-status').classList.toggle('offline',!r.available);$('#chat-send').disabled=!r.available;}).catch(()=>$('#model-status').textContent='模型状态未知');if(tasks.some(t=>['submitted','unknown'].includes(t.state)))startPolling();
