@@ -24,3 +24,5 @@ Use case: ads-marketing. Create a polished original GitHub README hero banner fo
 ```
 
 - `wallet-workspace.png`：2026-11-04，正式钱包 Agent 页面。展示对话入口、手动入口和由真实工具保存的公开账户超限预检任务；无钱包授权或资金转移。
+
+- 2026-11-04 v0.8 更新 `wallet-workspace.png`：正式站点刷新后恢复对话、当前讨论任务与原始超限预检参数。示例使用公开账户；未创建访问令牌或执行真实转账。

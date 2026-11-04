@@ -16,8 +16,10 @@
 
 [![钱包 Agent：对话、手动入口与已保存的转账任务](docs/assets/wallet-workspace.png)](https://www.darkchunk.win/collect/agent/wallet/)
 
-<sub>2026-11-04 正式网站实拍。公开账户预检示例，金额超限已阻止；没有转移资金。</sub>
+<sub>2026-11-04 正式网站实拍。公开账户预检任务及刷新后恢复的对话；金额超限已阻止，没有转移资金。</sub>
 
+
+> **v0.8 · 记住任务，后台继续核验**：刷新后继续对话；关联哈希后可关闭网页等待结果；其他 Agent 可用1小时访问令牌查询自己的任务。[主流程与接入说明](public/agent/wallet/guide.md)。
 
 ## 🧾 这笔钱，走到哪一步了？
 

@@ -16,8 +16,10 @@
 
 [![Wallet Agent with a persistent transfer task and verified amount-limit block](docs/assets/wallet-workspace.png)](https://www.darkchunk.win/collect/agent/wallet/)
 
-<sub>Production capture, November 4, 2026. Public-account preflight demonstration; no funds were moved.</sub>
+<sub>Production capture, November 4, 2026. Public-account task and conversation restored after refresh; no funds were moved.</sub>
 
+
+> **v0.8 · Persistent sessions & background checks** — Resume the conversation after refresh, keep checking a submitted transfer while the page is closed, and connect another agent with a scoped one-hour MCP token. [Guide](public/agent/wallet/guide.md).
 
 ## 🧾 Follow a payment from claim to evidence
 

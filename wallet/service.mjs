@@ -5,12 +5,12 @@ import {txHash,ASSETS,atomic} from '../public/lib/core.js';
 import {randomUUID} from 'node:crypto';
 const identifier=z.string().uuid(),revision=z.number().int().positive();
 const operation=z.strictObject({id:identifier,revision});
-export const walletSchemas={prepare:schemas.near_transfer_preflight,open:operation.extend({accountId:z.string()}),result:operation.extend({attemptId:identifier,txHash:z.string().refine(txHash).optional()}),check:operation,cancel:operation};
+export const walletSchemas={prepare:schemas.near_transfer_preflight,open:operation.extend({accountId:z.string()}),result:operation.extend({attemptId:identifier,txHash:z.string().refine(txHash).optional()}),check:operation,cancel:operation,detail:z.strictObject({id:identifier.nullable().optional()}),focus:z.strictObject({id:identifier}),tracking:operation.extend({action:z.enum(['pause','resume'])})};
 const parse=(s,x)=>{const r=s.safeParse(x);if(!r.success)throw new QueryError('INVALID_INPUT','请核对账户、金额与任务字段',400);return r.data;};
-export function createWalletService({store,service,adapters,clock=()=>Date.now()}={}){
-  const busy=new Set();
-  const status=token=>({enabled:true,network:'mainnet',tasks:store.list(token),retentionDays:7,maxTasks:20,serverSigning:false});
-  async function prepare(token,input){input=parse(walletSchemas.prepare,input);const preflight=await service.call('near_transfer_preflight',input);return store.create(token,{network:'mainnet',state:preflight.state==='ready_for_wallet_review'?'ready':preflight.state,input,preflight,txHash:null,attemptId:null,report:null});}
+export function createWalletService({store,service,adapters,clock=()=>Date.now(),autoStart=true,tickMs=5000}={}){
+  let stopped=false,timer=null,inFlight=null,closePromise=null;
+  const status=token=>({enabled:true,network:'mainnet',tasks:store.list(token),retentionDays:7,maxTasks:20,serverSigning:false,backgroundVerification:{enabled:true,leaseHours:24,maxChecks:60,automaticModelCalls:false},focusTaskId:store.conversation(token).focusTaskId});
+  async function prepare(token,input,{requestId,beforeWrite=()=>{}}={}){input=parse(walletSchemas.prepare,input);const preflight=await service.call('near_transfer_preflight',input);beforeWrite();return store.create(token,{network:'mainnet',state:preflight.state==='ready_for_wallet_review'?'ready':preflight.state,input,preflight,txHash:null,attemptId:null,report:null},{requestId});}
   async function open(token,raw){const x=parse(walletSchemas.open,raw),t=store.read(token,x.id);if(t.revision!==x.revision)throw new QueryError('WALLET_CONFLICT','任务已更新，请刷新',409);if(t.state!=='ready')throw new QueryError('WALLET_STATE','本任务无法再次打开钱包；如已提交请核验交易',409);if(t.input.accountId!==x.accountId)throw new QueryError('WALLET_ACCOUNT','请连接与付款账户一致的主网钱包',409);
     const preflight=await service.call('near_transfer_preflight',t.input);if(preflight.state!=='ready_for_wallet_review'||Date.parse(preflight.expiresAt)<=clock())return store.update(token,t.id,t.revision,{...t,preflight,state:preflight.state==='blocked'?'blocked':'incomplete'});
     return store.update(token,t.id,t.revision,{...t,preflight,state:'wallet_open',attemptId:randomUUID(),walletOpenedAt:new Date(clock()).toISOString()});
@@ -40,8 +40,17 @@ export function createWalletService({store,service,adapters,clock=()=>Date.now()
     if(t.input.asset!=='NEAR'){const ft=await service.call('near_verify_receipt',{txHash:t.txHash,senderAccountId:t.input.accountId,recipient:t.input.recipient,asset:t.input.asset});if(!ft.facts.verified||ft.facts.receivedAtomic!==atomic(t.input.amount,ASSETS[t.input.asset].decimals))throw new QueryError('WALLET_EVIDENCE','FT标准事件净到账尚未与任务金额匹配');report.received=ft.received;}
     return {...report,state:'completed',message:'FINAL执行、转账参数与目标收据核验通过',blocks,finalHead:{height:fh.height,hash:fh.hash},scope:'固定RPC返回的执行与区块证据；不是独立轻客户端证明，不证明对方控制权或业务订单归属。'};
   }
-  async function check(token,raw){const x=parse(walletSchemas.check,raw),t=store.read(token,x.id);if(t.revision!==x.revision)throw new QueryError('WALLET_CONFLICT','任务已更新，请刷新',409);if(!t.txHash)throw new QueryError('WALLET_HASH_REQUIRED','请提供钱包返回的交易哈希',400);if(['completed','failed'].includes(t.state))return t;if(busy.has(t.id)||t.lastCheckedAt&&clock()-Date.parse(t.lastCheckedAt)<5000)throw new QueryError('WALLET_COOLDOWN','正在核验或间隔不足5秒，请稍后再试',429);busy.add(t.id);
-    try{let report;try{report=await verify(t);}catch(e){report={state:'unknown',checkedAt:new Date(clock()).toISOString(),error:{code:e.code||'QUERY_FAILED',message:e instanceof QueryError?e.message:'本次链上核验未完成'}};}return store.update(token,t.id,t.revision,{...t,state:report.state==='pending'?'submitted':report.state,report,lastCheckedAt:new Date(clock()).toISOString()});}finally{busy.delete(t.id);}
+  async function check(token,raw,{background=false}={}){
+    const x=parse(walletSchemas.check,raw),claim=store.checkLease(token,x.id,x.revision,{background});if(!claim)return null;const {task:t,lease}=claim;if(!lease)return t;
+    let report;try{report=await verify(t);}catch(e){report={state:'unknown',checkedAt:new Date(clock()).toISOString(),error:{code:e.code||'QUERY_FAILED',message:e instanceof QueryError?e.message:'本次链上核验未完成'}};}
+    return store.finishCheck(token,t,lease,{...t,state:report.state==='pending'?'submitted':report.state,report,lastCheckedAt:new Date(clock()).toISOString()});
   }
-  return {status,prepare,open,result,check,cancel,close:()=>store.close()};
+  function detail(token,raw={}){const x=parse(walletSchemas.detail,raw),id=x.id||store.conversation(token).focusTaskId||store.list(token)[0]?.id;if(!id)throw new QueryError('WALLET_NOT_FOUND','当前会话还没有转账任务',404);return store.read(token,id);}
+  function focus(token,raw){const x=parse(walletSchemas.focus,raw);store.focus(token,x.id);return detail(token,x);}
+  function tracking(token,raw){const x=parse(walletSchemas.tracking,raw);return store.setTracking(token,x.id,x.revision,x.action);}
+  async function tick(){if(stopped)return;if(inFlight)return inFlight;inFlight=(async()=>{for(const due of store.due()){if(stopped)break;try{await check(due.token,{id:due.id,revision:due.revision},{background:true});}catch(e){if(!['WALLET_CONFLICT','WALLET_COOLDOWN','WALLET_SESSION'].includes(e.code))console.error('WALLET_BACKGROUND_CHECK_FAILED');}}})().finally(()=>{inFlight=null;});return inFlight;}
+  function start(){if(timer||stopped)return;timer=setInterval(()=>{void tick().catch(()=>console.error('WALLET_BACKGROUND_CYCLE_FAILED'));},tickMs);timer.unref?.();void tick().catch(()=>console.error('WALLET_BACKGROUND_CYCLE_FAILED'));}
+  function close(){if(closePromise)return closePromise;stopped=true;if(timer)clearInterval(timer);closePromise=(async()=>{await inFlight?.catch(()=>{});store.close();})();return closePromise;}
+  if(autoStart)start();
+  return {status,prepare,open,result,check,cancel,detail,focus,tracking,tick,start,close,conversations:store,accessStatus:store.accessStatus,createAccess:store.createAccess,authorizeAccess:store.authorizeAccess,revokeAccess:store.revokeAccess};
 }
