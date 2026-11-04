@@ -2,6 +2,7 @@ import {NearConnector} from '@hot-labs/near-connect';
 import {accountId,txHash,ASSETS,atomic} from '../public/lib/core.js';
 import {formatReply} from '../public/agent/chat-ui.js';
 import {accountView,accountViewFromTools,balanceLabel} from '../public/lib/account-view.js';
+import {consumeChatResponse} from '../public/agent/chat-stream.js';
 const $=s=>document.querySelector(s),base=new URL('../../',import.meta.url),api=async(path,body)=>{const r=await fetch(new URL('api/'+path,base),{method:body?'POST':'GET',headers:body?{'content-type':'application/json'}:{},body:body?JSON.stringify(body):undefined});const v=await r.json();if(!r.ok||!v.ok)throw Error(v.error?.message||'本次操作未完成');return v.data;};
 let connector,connected='',tasks=[],history=[],active=false,pollTimer,focusedTaskId=null,chatBusy=false,externalConfig=null;
 const node=(tag,text,cls)=>{const n=document.createElement(tag);if(text!==undefined)n.textContent=text;if(cls)n.className=cls;return n;};
@@ -68,21 +69,47 @@ function chatMessage(role,text,options={}){
   const n=node('article',undefined,role),body=node('div',undefined,'reply-text');
   if(role==='assistant'&&options.accountView){
     n.classList.add('has-account');n.append(renderAccountCard(options.accountView));
-    const explanation=node('details',undefined,'agent-explanation');explanation.append(node('summary','查看 Agent 说明'));body.innerHTML=formatReply(text);explanation.append(body);n.append(explanation);
+    body.innerHTML=formatReply(text);
+    if(text.length<=450){body.classList.add('account-summary');n.append(body);}else{const explanation=node('details',undefined,'agent-explanation');explanation.append(node('summary','查看 Agent 说明'));explanation.append(body);n.append(explanation);}
   }else if(role==='assistant'){body.innerHTML=formatReply(text);n.append(body);}else n.append(node('div',text,'reply-text'));
   if(options.tools?.length){const evidence=node('details',undefined,'tool-evidence');evidence.append(node('summary','本次使用的工具'),node('p',options.tools.map(t=>t.name+(t.status==='failed'?'（未完成）':'')).join(' → ')));n.append(evidence);}
   $('#chat-log').append(n);$('#chat-log').scrollTop=$('#chat-log').scrollHeight;return n;
 }
-$('#chat-form').addEventListener('submit',async e=>{
-  e.preventDefault();const input=$('#chat-input'),send=$('#chat-send'),content=input.value.trim();if(!content||chatBusy)return;
-  if(/sk-[\w-]{16,}|ed25519:[1-9A-HJ-NP-Za-km-z]{80,}|(?:私钥|助记词|seed phrase|mnemonic|private key)\s*[:：=]\s*\S+/i.test(content)){tell('请移除密钥或助记词后再发送。');return;}
-  send.disabled=true;chatBusy=true;$('#clear-chat').disabled=true;history.push({role:'user',content});history=history.slice(-9);chatMessage('user',content);input.value='';
-  $('#chat-log').setAttribute('aria-busy','true');const pending=chatMessage('assistant','正在理解需求并查询数据…');pending.classList.add('agent-thinking');tell('');
+const toolLabels={inspect_account:'读取主网余额与账户权限',compare_account:'核对账户变化',prepare_wallet_transfer:'检查条件并保存任务',get_wallet_task:'读取当前讨论任务',list_wallet_tasks:'读取任务列表',check_wallet_task:'核验链上执行结果',cancel_wallet_task:'取消尚未打开钱包的任务',network_status:'查询主网区块',verify_receipt:'核对到账收据',investigate_payment:'排查收款证据',provider_status:'查询兑换渠道状态',preflight_transfer:'检查转账条件'};
+async function streamTurn(payload,host){
+  if(chatBusy)return;chatBusy=true;$('#chat-send').disabled=true;$('#clear-chat').disabled=true;$('#chat-log').setAttribute('aria-busy','true');tell('');
+  const pending=host||node('article',undefined,'assistant');pending.className='assistant is-streaming';
+  const status=node('div','正在连接 Agent…','stream-status'),cards=node('div',undefined,'stream-card'),body=node('div',undefined,'reply-text stream-answer');body.hidden=true;pending.replaceChildren(status,cards,body);if(!host)$('#chat-log').append(pending);
+  let text='',view=null,paintId=null;
+  const nearBottom=()=>{const log=$('#chat-log');return log.scrollHeight-log.scrollTop-log.clientHeight<180;};
+  const follow=stick=>{if(stick){const log=$('#chat-log');log.scrollTop=log.scrollHeight;}};
+  const paint=()=>{paintId=null;const stick=nearBottom();body.hidden=!text;body.innerHTML=formatReply(text);follow(stick);};
+  const schedule=()=>{if(paintId===null)paintId=requestAnimationFrame(paint);};
   try{
-    const r=await api('wallet/chat',{messages:[{role:'user',content}],requestId:crypto.randomUUID(),...(connected?{walletAccountId:connected}:{})});
-    pending.remove();history.push({role:'assistant',content:r.answer.slice(0,2000)});chatMessage('assistant',r.answer,{accountView:r.accountView||accountViewFromTools(r.tools),tools:r.tools});
-  }catch(e){pending.remove();chatMessage('assistant',e.message);tell('对话未完成；可以重试或使用下方手动操作。');}
-  finally{await refresh();send.disabled=false;chatBusy=false;$('#clear-chat').disabled=false;$('#chat-log').setAttribute('aria-busy','false');updateFocus();}
+    const response=await fetch(new URL('api/wallet/chat',base),{method:'POST',headers:{'content-type':'application/json',accept:'text/event-stream'},body:JSON.stringify(payload),signal:AbortSignal.timeout(85000)});
+    const r=await consumeChatResponse(response,event=>{
+      if(event.type==='accepted')status.textContent='已收到，正在理解你的需求…';
+      if(event.type==='text_reset'){text='';schedule();}
+      if(event.type==='text_delta'&&typeof event.delta==='string'){text+=event.delta;status.textContent='正在生成回答…';schedule();}
+      if(event.type==='tool_start')status.textContent='正在'+(toolLabels[event.name]||'查询数据')+'…';
+      if(event.type==='tool_result'){
+        status.textContent=event.status==='completed'?'查询结果已返回，正在整理说明…':'该步骤未完成，正在说明原因…';
+        if(event.accountView){const stick=nearBottom();view=event.accountView;cards.replaceChildren(renderAccountCard(view));follow(stick);}
+        if(event.taskUpdated)void refresh();
+      }
+    });
+    if(paintId!==null){cancelAnimationFrame(paintId);paintId=null;}
+    pending.remove();history.push({role:'assistant',content:r.answer.slice(0,2000)});chatMessage('assistant',r.answer,{accountView:r.accountView||view||accountViewFromTools(r.tools),tools:r.tools});
+  }catch(e){
+    if(paintId!==null){cancelAnimationFrame(paintId);paint();}pending.classList.remove('is-streaming');status.classList.add('stream-error');status.textContent=e.message||'连接中断，本轮尚未确认完成。';
+    const recover=button('恢复本轮结果',()=>streamTurn(payload,pending),'recover-turn');pending.append(recover,node('small','恢复会使用同一请求编号，不会自动重放或新建转账。','stream-recovery-note'));tell('可以恢复本轮结果，或刷新页面查看已保存的对话和任务。');
+  }finally{await refresh();$('#chat-send').disabled=false;chatBusy=false;$('#clear-chat').disabled=false;$('#chat-log').setAttribute('aria-busy','false');updateFocus();}
+}
+$('#chat-form').addEventListener('submit',async e=>{
+  e.preventDefault();const input=$('#chat-input'),content=input.value.trim();if(!content||chatBusy)return;
+  if(/sk-[\w-]{16,}|ed25519:[1-9A-HJ-NP-Za-km-z]{80,}|(?:私钥|助记词|seed phrase|mnemonic|private key)\s*[:：=]\s*\S+/i.test(content)){tell('请移除密钥或助记词后再发送。');return;}
+  history.push({role:'user',content});history=history.slice(-9);chatMessage('user',content);input.value='';
+  await streamTurn({messages:[{role:'user',content}],requestId:crypto.randomUUID(),...(connected?{walletAccountId:connected}:{})});
 });
 $('#chat-input').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey&&!e.isComposing){e.preventDefault();if(!$('#chat-send').disabled)$('#chat-form').requestSubmit();}});
 function updateFocus(){const t=tasks.find(t=>t.id===focusedTaskId);$('#conversation-focus').hidden=!t;$('#conversation-focus').textContent=t?'正在讨论 '+t.input.amount+' '+t.input.asset+' → '+t.input.recipient:'';}

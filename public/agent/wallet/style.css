@@ -87,3 +87,12 @@
   .composer-footer small{max-width:180px;font-size:8px}.composer-hint{display:none}
 }
 @media(prefers-reduced-motion:reduce){.agent-thinking .reply-text:before{animation:none}}
+.stream-status{display:flex;align-items:center;gap:8px;font-size:11px;color:#809170;margin:0 0 12px}
+.stream-status:before{content:'';width:6px;height:6px;border-radius:50%;background:#99b77a;flex-shrink:0;animation:agent-pulse 1.2s ease-in-out infinite}
+.stream-status.stream-error{color:#987239;line-height:1.8}
+.stream-status.stream-error:before{background:#c7a25f;animation:none}
+#chat-log .assistant>.stream-answer,#chat-log .assistant>.account-summary{background:transparent;border:0;padding:12px 3px;font-size:13px;line-height:1.9;white-space:pre-wrap}
+.is-streaming .stream-answer:not([hidden]):after{content:'';display:inline-block;width:2px;height:1em;background:#78994f;margin-left:3px;vertical-align:-1px;animation:agent-pulse .8s ease-in-out infinite}
+.recover-turn{font-size:11px;padding:8px 12px;margin-top:10px}
+.stream-recovery-note{display:block;font-size:10px;margin:8px 0;color:#8f977f}
+@media(prefers-reduced-motion:reduce){.stream-status:before,.is-streaming .stream-answer:after{animation:none}}

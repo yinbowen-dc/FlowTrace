@@ -18,6 +18,7 @@ import {createWalletStore} from './wallet/store.mjs';
 import {createWalletService} from './wallet/service.mjs';
 import {publicConversation,prepareConversation,conversationFingerprint} from './agent/conversations.mjs';
 import {createTaskMcpServer} from './mcp/tasks.mjs';
+import {openChatStream} from './agent/http-stream.mjs';
 export {VERSION};
 const root=fileURLToPath(new URL('./public/',import.meta.url));
 const mime={'.txt':'text/plain; charset=utf-8','.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.svg':'image/svg+xml','.png':'image/png','.csv':'text/csv; charset=utf-8','.json':'application/json; charset=utf-8','.md':'text/markdown; charset=utf-8','.yaml':'text/plain; charset=utf-8'};
@@ -87,7 +88,10 @@ export function createServer({adapters=createAdapters(),basePath=process.env.BAS
         if(path==='/api/agent/chat/status'){json(200,{ok:true,data:{...chat.status(),limits:{perIpPerMinute:2,dailyRequests:chatDailyLimit,concurrent:1},quotaScope:'进程内计数，服务重启后重置'}});return;}
         if(path==='/api/agent/chat'||path==='/api/wallet/chat'){
           validateChat(body);
-          if(path==='/api/wallet/chat'&&wallet&&body.requestId){const cached=wallet.conversations.lookupTurn(walletToken,body.requestId,conversationFingerprint(body));if(cached){if(cached.error)throw new QueryError(cached.error.code,cached.error.message,cached.error.status);json(200,{ok:true,requestId,data:{...cached,reused:true}});return;}}
+          const wantsStream=(req.headers.accept||'').split(',').some(x=>x.trim().split(';')[0]==='text/event-stream');
+          let turn,stream;
+          const finish=data=>{if(wantsStream){stream||=openChatStream(res,requestId);stream.complete(data);}else json(200,{ok:true,requestId,data});};
+          if(path==='/api/wallet/chat'&&wallet&&body.requestId){const cached=wallet.conversations.lookupTurn(walletToken,body.requestId,conversationFingerprint(body));if(cached){if(cached.error)throw new QueryError(cached.error.code,cached.error.message,cached.error.status);finish({...cached,reused:true});return;}}
           if(!chat.status().available)throw new QueryError('MODEL_NOT_CONFIGURED','对话模型暂未启用，请使用手动操作。',503);
           const day=new Date().toISOString().slice(0,10);if(day!==chatDay){chatDay=day;chatCount=0;}
           if(chatCount>=chatDailyLimit)throw new QueryError('CHAT_DAILY_LIMIT','今日演示对话已达次数上限，仍可使用手动查询。',429);
@@ -96,13 +100,12 @@ export function createServer({adapters=createAdapters(),basePath=process.env.BAS
           if(chatActive)throw new QueryError('CHAT_BUSY','正在处理其他对话，请稍后再试或使用手动操作。',503);
           for(const k of chatBuckets.keys())if(!k.endsWith(':'+minute))chatBuckets.delete(k);
           chatBuckets.set(chatKey,(chatBuckets.get(chatKey)||0)+1);chatCount++;chatActive=true;concurrent++;
-          let turn;
-          try{let currentToken=walletToken,context={};if(path==='/api/wallet/chat'&&wallet){turn=await prepareConversation(wallet.conversations,currentToken,body,body.requestId||requestId);currentToken=turn.token;setWalletCookie(currentToken);if(turn.cached){if(turn.cached.error)throw new QueryError(turn.cached.error.code,turn.cached.error.message,turn.cached.error.status);json(200,{ok:true,requestId,data:{...turn.cached,reused:true}});return;}
+          try{let currentToken=walletToken,context={};if(path==='/api/wallet/chat'&&wallet){turn=await prepareConversation(wallet.conversations,currentToken,body,body.requestId||requestId);currentToken=turn.token;setWalletCookie(currentToken);if(turn.cached){if(turn.cached.error)throw new QueryError(turn.cached.error.code,turn.cached.error.message,turn.cached.error.status);finish({...turn.cached,reused:true});return;}
             const scoped=fn=>(...args)=>{turn.assertCurrent();return fn(...args);};
             let turnFocus=turn.focusTaskId;const resolve=x=>wallet.detail(currentToken,{id:x.id??turnFocus});
             context={session:turn.session,conversationMessages:turn.messages,wallet:{accountId:body.walletAccountId,status:scoped(()=>({...wallet.status(currentToken),focusTaskId:turnFocus})),detail:scoped(x=>resolve(x)),check:scoped(x=>{const t=resolve(x);return wallet.check(currentToken,{id:t.id,revision:t.revision});}),cancel:scoped(x=>{const t=resolve(x),focus=turnFocus;if(t.id!==focus&&!body.messages.at(-1).content.includes(t.id))throw new QueryError('WALLET_INTENT_REQUIRED','请先选中你要取消的任务，或在消息中明确任务编号',400);return wallet.cancel(currentToken,{id:t.id,revision:t.revision});}),prepare:scoped(async input=>{const data=(await wallet.prepare(currentToken,input,{requestId:body.requestId||requestId,beforeWrite:()=>turn.assertCurrent()})).data;turnFocus=data.id;return data;})}};
-          }const data=await chat.respond(body,context);await turn?.commit?.(data);json(200,{ok:true,requestId,data});}
-          catch(e){if(turn?.fail)try{turn.fail({code:e.code||'MODEL_UNAVAILABLE',message:e instanceof QueryError?e.message:'本轮对话未完成，请查看任务列表',status:e.status||503});}catch{}throw e;}finally{chatActive=false;concurrent--;}return;
+          }if(wantsStream){stream=openChatStream(res,requestId);context.onEvent=event=>stream.send(event);}const data=await chat.respond(body,context);await turn?.commit?.(data);finish(data);}
+          catch(e){if(turn?.fail)try{turn.fail({code:e.code||'MODEL_UNAVAILABLE',message:e instanceof QueryError?e.message:'本轮对话未完成，请查看任务列表',status:e.status||503});}catch{}if(stream){stream.fail({code:e.code||'MODEL_UNAVAILABLE',message:e instanceof QueryError?e.message:'本轮处理未完成，请查看任务列表或恢复本轮结果'});return;}throw e;}finally{chatActive=false;concurrent--;}return;
         }
         concurrent++;try{const data=path==='/api/agent/catalog'?service.catalog():path==='/api/agent/run'?await service.run(body):path==='/api/network'?await adapters.network():path==='/api/public-sample'?await adapters.findSample():path==='/api/provider-status'?await adapters.provider(body):await adapters.receipt(body);json(200,{ok:true,requestId,data});}finally{concurrent--;}return;
       }
